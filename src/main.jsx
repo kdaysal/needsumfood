@@ -12,7 +12,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </React.StrictMode>
 );
-
-   // test
-      // test
-            let a = 5;
