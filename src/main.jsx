@@ -1,9 +1,9 @@
 // src/main.jsx
+import "./index.css"; // Tailwind or default CSS
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
-import "./index.css"; // Tailwind or default CSS
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
