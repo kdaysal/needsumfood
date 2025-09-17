@@ -1,164 +1,124 @@
-import React, { useState } from "react";
-import styles from "./LandingPage.module.css";
+import React, { useState, useEffect } from "react"
+import styles from "./LandingPage.module.css"
 
 function LandingPage() {
-  const [categories, setCategories] = useState([
-    "Groceries", "Toys", "Tools", "Bills", "Chores"
-  ]);
-  const [hiddenCategories, setHiddenCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState("");
-  const [modalCategory, setModalCategory] = useState(null);
+    const [categories, setCategories] = useState([])
+    const [newCategory, setNewCategory] = useState("")
+    const [hiddenCategories, setHiddenCategories] = useState([])
+    const [modalCategory, setModalCategory] = useState(null)
 
-  // Add category
-  const handleAddCategory = () => {
-    if (newCategory.trim() !== "" && !categories.includes(newCategory)) {
-      setCategories([...categories, newCategory.trim()]);
-      setNewCategory("");
+    // Load categories from backend
+    useEffect(() => {
+        fetch("http://localhost:5001/categories")
+            .then((res) => res.json())
+            .then((data) => setCategories(data))
+            .catch((err) => console.error("Error fetching categories:", err))
+    }, [])
+
+    // Add category
+    const handleAddCategory = () => {
+        if (newCategory.trim() === "") return
+        fetch("http://localhost:5001/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newCategory }),
+        })
+            .then((res) => res.json())
+            .then((cat) => {
+                setCategories([...categories, cat])
+                setNewCategory("")
+            })
     }
-  };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") handleAddCategory();
-  };
+    // Hide category (local only for now)
+    const handleHideCategory = (id) => {
+        setHiddenCategories([...hiddenCategories, id])
+    }
 
-  // Hide category
-  const handleHideCategory = (category) => {
-    setHiddenCategories([...hiddenCategories, category]);
-  };
+    // Delete category (with backend call)
+    const handleDeleteCategory = (id) => {
+        setModalCategory(id)
+    }
 
-  // Show all hidden categories
-  const handleShowAll = () => {
-    setHiddenCategories([]);
-  };
+    const confirmDelete = () => {
+        fetch(`http://localhost:5001/categories/${modalCategory}`, {
+            method: "DELETE",
+        }).then(() => {
+            setCategories(categories.filter((cat) => cat._id !== modalCategory))
+            setHiddenCategories(hiddenCategories.filter((id) => id !== modalCategory))
+            setModalCategory(null)
+        })
+    }
 
-  // Delete category
-  const handleDeleteCategory = (category) => {
-    setModalCategory(category);
-  };
+    const cancelDelete = () => setModalCategory(null)
 
-  const confirmDelete = () => {
-    setCategories(categories.filter((cat) => cat !== modalCategory));
-    setHiddenCategories(hiddenCategories.filter((cat) => cat !== modalCategory));
-    setModalCategory(null);
-  };
+    return (
+        <div className={styles.container}>
+            <h1 className={styles.title}>NeedSumFood</h1>
+            <h2 className={styles.subtitle}>Welcome, User!</h2>
 
-  const cancelDelete = () => {
-    setModalCategory(null);
-  };
-
-  return (
-    <div className={styles.container}>
-      <h1 className={styles.title}>NeedSumFood</h1>
-      <h2 className={styles.subtitle}>Welcome, User!</h2>
-
-      {/* Input for new category */}
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          type="text"
-          placeholder="New category"
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          onKeyPress={handleKeyPress}
-          style={{ padding: "0.5rem", marginRight: "0.5rem", width: "200px" }}
-        />
-        <button onClick={handleAddCategory} style={{ padding: "0.5rem 1rem" }}>
-          Add
-        </button>
-        {hiddenCategories.length > 0 && (
-          <button
-            onClick={handleShowAll}
-            style={{ padding: "0.5rem 1rem", marginLeft: "1rem" }}
-          >
-            Show All Categories
-          </button>
-        )}
-      </div>
-
-      {/* Category cards */}
-      {categories
-        .filter((cat) => !hiddenCategories.includes(cat))
-        .map((cat) => (
-          <div key={cat} className={styles.card} style={{ position: "relative" }}>
-            {cat}
-            {/* Hide button */}
-            <button
-              onClick={() => handleHideCategory(cat)}
-              style={{
-                position: "absolute",
-                top: "5px",
-                right: "35px",
-                background: "transparent",
-                border: "none",
-                color: "gray",
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-              title="Hide"
-            >
-              👁
-            </button>
-
-            {/* Delete button */}
-            <button
-              onClick={() => handleDeleteCategory(cat)}
-              style={{
-                position: "absolute",
-                top: "5px",
-                right: "10px",
-                background: "transparent",
-                border: "none",
-                color: "red",
-                fontWeight: "bold",
-                cursor: "pointer",
-              }}
-              title="Delete"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-
-      {/* Delete confirmation modal */}
-      {modalCategory && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              background: "white",
-              padding: "2rem",
-              borderRadius: "0.5rem",
-              textAlign: "center",
-              minWidth: "300px",
-            }}
-          >
-            <p>Are you sure you want to permanently delete "{modalCategory}"?</p>
-            <div style={{ marginTop: "1rem" }}>
-              <button
-                onClick={confirmDelete}
-                style={{ marginRight: "1rem", padding: "0.5rem 1rem" }}
-              >
-                Yes
-              </button>
-              <button onClick={cancelDelete} style={{ padding: "0.5rem 1rem" }}>
-                No
-              </button>
+            {/* Input */}
+            <div style={{ marginBottom: "1rem" }}>
+                <input
+                    type="text"
+                    placeholder="New category"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
+                    style={{ padding: "0.5rem", marginRight: "0.5rem", width: "200px" }}
+                />
+                <button onClick={handleAddCategory} style={{ padding: "0.5rem 1rem" }}>
+                    Add
+                </button>
             </div>
-          </div>
+
+            {/* Categories */}
+            {categories
+                .filter((cat) => !hiddenCategories.includes(cat._id))
+                .map((cat) => (
+                    <div key={cat._id} className={styles.card} style={{ position: "relative" }}>
+                        {cat.name}
+                        <button
+                            onClick={() => handleHideCategory(cat._id)}
+                            style={{ position: "absolute", top: "5px", right: "35px" }}
+                        >
+                            👁
+                        </button>
+                        <button
+                            onClick={() => handleDeleteCategory(cat._id)}
+                            style={{ position: "absolute", top: "5px", right: "10px", color: "red" }}
+                        >
+                            ×
+                        </button>
+                    </div>
+                ))}
+
+            {/* Delete confirmation modal */}
+            {modalCategory && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                    }}
+                >
+                    <div style={{ background: "white", padding: "2rem", borderRadius: "0.5rem" }}>
+                        <p>Are you sure you want to delete this category?</p>
+                        <button onClick={confirmDelete} style={{ marginRight: "1rem" }}>
+                            Yes
+                        </button>
+                        <button onClick={cancelDelete}>No</button>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    )
 }
 
-export default LandingPage;
+export default LandingPage

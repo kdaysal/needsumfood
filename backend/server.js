@@ -11,25 +11,23 @@ const __filename = fileURLToPath(
     import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Explicitly tell dotenv where to look
 dotenv.config({
     path: path.join(__dirname, ".env")
 });
 
-console.log("Loaded MONGO_URI:", process.env.MONGO_URI); // sanity check
-
 console.log("Loaded MONGO_URI:", process.env.MONGO_URI);
 
-
 const app = express();
+
+// ✅ Allow everything (test mode)
 app.use(cors());
 app.use(express.json());
 
 // MongoDB connection
 mongoose
     .connect(process.env.MONGO_URI)
-    .then(() => console.log("MongoDB connected"))
-    .catch((err) => console.error(err));
+    .then(() => console.log("✅ MongoDB connected"))
+    .catch((err) => console.error("❌ MongoDB error:", err));
 
 // Schema + Model
 const CategorySchema = new mongoose.Schema({
@@ -45,44 +43,11 @@ const CategorySchema = new mongoose.Schema({
 
 const Category = mongoose.model("Category", CategorySchema);
 
-// Routes
+// ✅ Minimal route
 app.get("/categories", async (req, res) => {
     const categories = await Category.find();
     res.json(categories);
 });
 
-app.post("/categories", async (req, res) => {
-    const {
-        name
-    } = req.body;
-    const category = new Category({
-        name
-    });
-    await category.save();
-    res.json(category);
-});
-
-app.put("/categories/:id/hide", async (req, res) => {
-    const {
-        id
-    } = req.params;
-    const category = await Category.findByIdAndUpdate(id, {
-        hidden: true
-    }, {
-        new: true
-    });
-    res.json(category);
-});
-
-app.delete("/categories/:id", async (req, res) => {
-    const {
-        id
-    } = req.params;
-    await Category.findByIdAndDelete(id);
-    res.json({
-        success: true
-    });
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
