@@ -1,3 +1,4 @@
+// backend/server.js
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -53,16 +54,21 @@ const CategorySchema = new mongoose.Schema({
 const Category = mongoose.model("Category", CategorySchema);
 
 // Routes
+
+// Get categories, filtered by view (visible, hidden, all)
 app.get("/categories", async (req, res) => {
     const {
         view = "visible"
     } = req.query;
 
     const filter =
-        view === "hidden" ? {
+        view === "hidden" ?
+        {
             hidden: true
         } :
-        view === "all" ? {} : {
+        view === "all" ?
+        {} :
+        {
             hidden: false
         };
 
@@ -72,6 +78,7 @@ app.get("/categories", async (req, res) => {
     res.json(categories);
 });
 
+// Create new category
 app.post("/categories", async (req, res) => {
     const {
         name
@@ -83,18 +90,7 @@ app.post("/categories", async (req, res) => {
     res.json(category);
 });
 
-app.put("/categories/:id/hide", async (req, res) => {
-    const {
-        id
-    } = req.params;
-    const category = await Category.findByIdAndUpdate(id, {
-        hidden: true
-    }, {
-        new: true
-    });
-    res.json(category);
-});
-
+// Update category (rename or toggle hidden)
 app.patch("/categories/:id", async (req, res) => {
     const {
         id
@@ -104,19 +100,31 @@ app.patch("/categories/:id", async (req, res) => {
         hidden
     } = req.body;
 
-    const update = {};
-    if (typeof name === "string") update.name = name.trim();
-    if (typeof hidden === "boolean") update.hidden = hidden;
+    try {
+        const update = {};
+        if (typeof name === "string") update.name = name.trim();
+        if (typeof hidden === "boolean") update.hidden = hidden;
 
-    const category = await Category.findByIdAndUpdate(id, update, {
-        new: true
-    });
-    if (!category) return res.status(404).json({
-        error: "Not found"
-    });
-    res.json(category);
+        const category = await Category.findByIdAndUpdate(id, update, {
+            new: true
+        });
+
+        if (!category) {
+            return res.status(404).json({
+                error: "Category not found"
+            });
+        }
+
+        res.json(category);
+    } catch (err) {
+        console.error("Error updating category:", err);
+        res.status(500).json({
+            error: "Failed to update category"
+        });
+    }
 });
 
+// Delete category
 app.delete("/categories/:id", async (req, res) => {
     const {
         id
@@ -127,5 +135,6 @@ app.delete("/categories/:id", async (req, res) => {
     });
 });
 
+// Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

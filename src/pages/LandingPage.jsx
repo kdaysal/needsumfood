@@ -44,13 +44,13 @@ function LandingPage() {
         }
     }
 
-    // Hide category (no confirm)
+    // Hide a category by updating its "hidden" flag
     const handleHide = async (id) => {
-        setCategories((prev) => prev.filter((c) => c._id !== id))
         try {
-            await updateCategory(id, { hidden: true })
-        } catch (e) {
-            console.error("Error hiding category:", e)
+            const updated = await updateCategory(id, { hidden: true })
+            setCategories((prev) => prev.map((cat) => (cat._id === id ? updated : cat)))
+        } catch (err) {
+            console.error("Error hiding category:", err)
         }
     }
 
