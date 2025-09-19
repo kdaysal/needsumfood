@@ -45,29 +45,13 @@ const CategorySchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-}, {
-    timestamps: true
 });
 
 const Category = mongoose.model("Category", CategorySchema);
 
 // Routes
 app.get("/categories", async (req, res) => {
-    const {
-        view = "visible"
-    } = req.query;
-
-    const filter =
-        view === "hidden" ? {
-            hidden: true
-        } :
-        view === "all" ? {} : {
-            hidden: false
-        };
-
-    const categories = await Category.find(filter).sort({
-        createdAt: 1
-    });
+    const categories = await Category.find();
     res.json(categories);
 });
 
@@ -90,28 +74,6 @@ app.put("/categories/:id/hide", async (req, res) => {
         hidden: true
     }, {
         new: true
-    });
-    res.json(category);
-});
-
-app.patch("/categories/:id", async (req, res) => {
-    const {
-        id
-    } = req.params;
-    const {
-        name,
-        hidden
-    } = req.body;
-
-    const update = {};
-    if (typeof name === "string") update.name = name.trim();
-    if (typeof hidden === "boolean") update.hidden = hidden;
-
-    const category = await Category.findByIdAndUpdate(id, update, {
-        new: true
-    });
-    if (!category) return res.status(404).json({
-        error: "Not found"
     });
     res.json(category);
 });
