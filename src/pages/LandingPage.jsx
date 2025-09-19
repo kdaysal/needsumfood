@@ -1,119 +1,172 @@
-import React, { useState, useEffect } from "react"
+// src/pages/LandingPage.jsx
+import React, { useEffect, useState } from "react"
 import styles from "./LandingPage.module.css"
+import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 
 function LandingPage() {
+    const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
     const [categories, setCategories] = useState([])
     const [newCategory, setNewCategory] = useState("")
-    const [hiddenCategories, setHiddenCategories] = useState([])
-    const [modalCategory, setModalCategory] = useState(null)
+    const [modalCategoryId, setModalCategoryId] = useState(null)
+    const [loading, setLoading] = useState(false)
 
-    // Load categories from backend
+    // Load categories whenever view changes
     useEffect(() => {
-        fetch("http://localhost:5001/categories")
-            .then((res) => res.json())
-            .then((data) => setCategories(data))
-            .catch((err) => console.error("Error fetching categories:", err))
-    }, [])
+        ;(async () => {
+            setLoading(true)
+            try {
+                const data = await fetchCategories(view)
+                setCategories(data)
+            } catch (e) {
+                console.error("Error fetching categories:", e)
+            } finally {
+                setLoading(false)
+            }
+        })()
+    }, [view])
 
-    // Add category
-    const handleAddCategory = () => {
-        if (newCategory.trim() === "") return
-        fetch("http://localhost:5001/categories", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: newCategory }),
-        })
-            .then((res) => res.json())
-            .then((cat) => {
-                setCategories([...categories, cat])
-                setNewCategory("")
-            })
+    // Add new category
+    const handleAddCategory = async () => {
+        const name = newCategory.trim()
+        if (!name) return
+
+        if (categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+            setNewCategory("")
+            return
+        }
+
+        try {
+            const created = await createCategory(name)
+            if (view !== "hidden") setCategories((prev) => [...prev, created])
+            setNewCategory("")
+        } catch (e) {
+            console.error("Error adding category:", e)
+        }
     }
 
-    // Hide category (local only for now)
-    const handleHideCategory = (id) => {
-        setHiddenCategories([...hiddenCategories, id])
+    // Hide category (no confirm)
+    const handleHide = async (id) => {
+        setCategories((prev) => prev.filter((c) => c._id !== id))
+        try {
+            await updateCategory(id, { hidden: true })
+        } catch (e) {
+            console.error("Error hiding category:", e)
+        }
     }
 
-    // Delete category (with backend call)
-    const handleDeleteCategory = (id) => {
-        setModalCategory(id)
+    // Show category (from hidden view)
+    const handleShow = async (id) => {
+        if (view === "hidden") setCategories((prev) => prev.filter((c) => c._id !== id))
+        try {
+            await updateCategory(id, { hidden: false })
+        } catch (e) {
+            console.error("Error showing category:", e)
+        }
     }
 
-    const confirmDelete = () => {
-        fetch(`http://localhost:5001/categories/${modalCategory}`, {
-            method: "DELETE",
-        }).then(() => {
-            setCategories(categories.filter((cat) => cat._id !== modalCategory))
-            setHiddenCategories(hiddenCategories.filter((id) => id !== modalCategory))
-            setModalCategory(null)
-        })
+    // Delete with confirm
+    const handleDelete = (id) => setModalCategoryId(id)
+    const confirmDelete = async () => {
+        const id = modalCategoryId
+        setModalCategoryId(null)
+        setCategories((prev) => prev.filter((c) => c._id !== id))
+        try {
+            await deleteCategory(id)
+        } catch (e) {
+            console.error("Error deleting category:", e)
+        }
     }
-
-    const cancelDelete = () => setModalCategory(null)
+    const cancelDelete = () => setModalCategoryId(null)
 
     return (
         <div className={styles.container}>
-            <h1 className={styles.title}>NeedSumFood</h1>
-            <h2 className={styles.subtitle}>Welcome, User!</h2>
+            <header className={styles.header}>
+                <div>
+                    <h1 className={styles.title}>NeedSumFood</h1>
+                    <p className={styles.subtitle}>Welcome, User!</p>
+                </div>
 
-            {/* Input */}
-            <div style={{ marginBottom: "1rem" }}>
+                {/* View toggle */}
+                <div className={styles.segment}>
+                    <button
+                        className={`${styles.segmentBtn} ${view === "visible" ? styles.active : ""}`}
+                        onClick={() => setView("visible")}
+                    >
+                        Visible
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${view === "hidden" ? styles.active : ""}`}
+                        onClick={() => setView("hidden")}
+                    >
+                        Hidden
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${view === "all" ? styles.active : ""}`}
+                        onClick={() => setView("all")}
+                    >
+                        All
+                    </button>
+                </div>
+            </header>
+
+            {/* Add input */}
+            <div className={styles.addBar}>
                 <input
+                    className={styles.input}
                     type="text"
                     placeholder="New category"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-                    style={{ padding: "0.5rem", marginRight: "0.5rem", width: "200px" }}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
                 />
-                <button onClick={handleAddCategory} style={{ padding: "0.5rem 1rem" }}>
+                <button className={styles.addBtn} onClick={handleAddCategory}>
                     Add
                 </button>
             </div>
 
-            {/* Categories */}
-            {categories
-                .filter((cat) => !hiddenCategories.includes(cat._id))
-                .map((cat) => (
-                    <div key={cat._id} className={styles.card} style={{ position: "relative" }}>
-                        {cat.name}
-                        <button
-                            onClick={() => handleHideCategory(cat._id)}
-                            style={{ position: "absolute", top: "5px", right: "35px" }}
-                        >
-                            👁
-                        </button>
-                        <button
-                            onClick={() => handleDeleteCategory(cat._id)}
-                            style={{ position: "absolute", top: "5px", right: "10px", color: "red" }}
-                        >
-                            ×
-                        </button>
+            {/* List */}
+            <main className={styles.list}>
+                {loading && <div className={styles.loading}>Loading…</div>}
+                {!loading && categories.length === 0 && <div className={styles.empty}>No categories in this view.</div>}
+
+                {categories.map((cat) => (
+                    <div key={cat._id} className={styles.card}>
+                        <span className={styles.cardTitle}>{cat.name}</span>
+                        <div className={styles.actions}>
+                            {cat.hidden ? (
+                                <button className={styles.iconBtn} title="Show" onClick={() => handleShow(cat._id)}>
+                                    👁️‍🗨️
+                                </button>
+                            ) : (
+                                <button className={styles.iconBtn} title="Hide" onClick={() => handleHide(cat._id)}>
+                                    👁️
+                                </button>
+                            )}
+                            <button
+                                className={`${styles.iconBtn} ${styles.danger}`}
+                                title="Delete"
+                                onClick={() => handleDelete(cat._id)}
+                            >
+                                ×
+                            </button>
+                        </div>
                     </div>
                 ))}
+            </main>
 
-            {/* Delete confirmation modal */}
-            {modalCategory && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: "rgba(0,0,0,0.5)",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
-                >
-                    <div style={{ background: "white", padding: "2rem", borderRadius: "0.5rem" }}>
-                        <p>Are you sure you want to delete this category?</p>
-                        <button onClick={confirmDelete} style={{ marginRight: "1rem" }}>
-                            Yes
-                        </button>
-                        <button onClick={cancelDelete}>No</button>
+            {/* Delete confirm modal */}
+            {modalCategoryId && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <p>Are you sure you want to permanently delete this category?</p>
+                        <div className={styles.modalActions}>
+                            <button className={styles.confirm} onClick={confirmDelete}>
+                                Yes
+                            </button>
+                            <button className={styles.cancel} onClick={cancelDelete}>
+                                No
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

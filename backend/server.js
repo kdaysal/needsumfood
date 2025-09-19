@@ -23,10 +23,11 @@ const app = express();
 app.use(
     cors({
         origin: "http://localhost:5173",
-        methods: ["GET", "POST", "PUT", "DELETE"],
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
         allowedHeaders: ["Content-Type"],
     })
 );
+
 app.use(express.json());
 
 // MongoDB connection
