@@ -44,11 +44,12 @@ function LandingPage() {
         }
     }
 
-    // Hide a category by updating its "hidden" flag
+    // Hide a category by updating its "hidden" flag (refetch afterwards)
     const handleHide = async (id) => {
         try {
-            const updated = await updateCategory(id, { hidden: true })
-            setCategories((prev) => prev.map((cat) => (cat._id === id ? updated : cat)))
+            await updateCategory(id, { hidden: true })
+            const data = await fetchCategories(view) // refresh categories from backend
+            setCategories(data)
         } catch (err) {
             console.error("Error hiding category:", err)
         }
@@ -56,9 +57,10 @@ function LandingPage() {
 
     // Show category (from hidden view)
     const handleShow = async (id) => {
-        if (view === "hidden") setCategories((prev) => prev.filter((c) => c._id !== id))
         try {
             await updateCategory(id, { hidden: false })
+            const data = await fetchCategories(view) // refresh categories from backend
+            setCategories(data)
         } catch (e) {
             console.error("Error showing category:", e)
         }
@@ -69,9 +71,10 @@ function LandingPage() {
     const confirmDelete = async () => {
         const id = modalCategoryId
         setModalCategoryId(null)
-        setCategories((prev) => prev.filter((c) => c._id !== id))
         try {
             await deleteCategory(id)
+            const data = await fetchCategories(view) // refresh categories from backend
+            setCategories(data)
         } catch (e) {
             console.error("Error deleting category:", e)
         }
@@ -175,3 +178,4 @@ function LandingPage() {
 }
 
 export default LandingPage
+
