@@ -21,13 +21,23 @@ console.log("Loaded MONGO_URI:", process.env.MONGO_URI); // sanity check
 
 const app = express();
 // Allow requests from your Vite dev server
+const allowedOrigins = [
+    "http://localhost:5173", // dev
+    "https://kdaysal.github.io", // GitHub Pages (prod)
+];
+
 app.use(
     cors({
-        origin: "http://localhost:5173",
-        methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        origin: (origin, cb) => {
+            // allow non-browser tools (like curl) and listed origins
+            if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+            return cb(new Error("Not allowed by CORS"));
+        },
+        methods: ["GET", "POST", "PATCH", "DELETE"],
         allowedHeaders: ["Content-Type"],
     })
 );
+
 
 app.use(express.json());
 
@@ -62,13 +72,10 @@ app.get("/categories", async (req, res) => {
     } = req.query;
 
     const filter =
-        view === "hidden" ?
-        {
+        view === "hidden" ? {
             hidden: true
         } :
-        view === "all" ?
-        {} :
-        {
+        view === "all" ? {} : {
             hidden: false
         };
 
@@ -132,6 +139,13 @@ app.delete("/categories/:id", async (req, res) => {
     await Category.findByIdAndDelete(id);
     res.json({
         success: true
+    });
+});
+
+// Health check
+app.get("/health", (req, res) => {
+    res.json({
+        ok: true
     });
 });
 
