@@ -1,36 +1,234 @@
+/* Container */
 .container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+    font-family: system-ui, sans-serif;
+    background: #f9fafb;
     min-height: 100vh;
-    padding: 2rem;
-    background-color: #f0f4f8;
-    /* light gray */
     display: flex;
     flex-direction: column;
-    align-items: center;
+}
+
+/* Header */
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    text-align: center;
 }
 
 .title {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     font-weight: bold;
-    margin-bottom: 1rem;
+    color: #111827;
 }
 
 .subtitle {
-    font-size: 1.25rem;
-    margin-bottom: 2rem;
+    font-size: 0.9rem;
+    color: #6b7280;
 }
 
-.card {
-    background-color: white;
-    padding: 1rem 2rem;
-    margin: 0.5rem 0;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    width: 300px;
-    text-align: center;
+/* Segment buttons (view toggle) */
+.segment {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.segmentBtn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
     cursor: pointer;
-    transition: transform 0.2s;
+    font-size: 0.9rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.segmentBtn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.segmentBtn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+    font-weight: 500;
+}
+
+/* Add bar */
+.addBar {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
+.addBtn {
+    padding: 0.5rem 1rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.addBtn:hover {
+    background: #1e40af;
+}
+
+/* List */
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+/* Category card */
+.card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-    transform: scale(1.03);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cardTitle {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+/* Action buttons */
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.iconBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.iconBtn:hover {
+    transform: scale(1.15);
+}
+
+.iconBtn.danger {
+    color: #dc2626;
+}
+
+.iconBtn.danger:hover {
+    color: #991b1b;
+}
+
+/* Loading & empty states */
+.loading,
+.empty {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin-top: 1.5rem;
+}
+
+/* Modal overlay */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+}
+
+.modal {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 8px;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modalActions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1rem;
+}
+
+.confirm {
+    padding: 0.4rem 0.8rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.confirm:hover {
+    background: #991b1b;
+}
+
+.cancel {
+    padding: 0.4rem 0.8rem;
+    background: #e5e7eb;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cancel:hover {
+    background: #d1d5db;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+    .addBar {
+        flex-direction: column;
+    }
+
+    .addBtn {
+        width: 100%;
+    }
+
+    .segment {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
 }
