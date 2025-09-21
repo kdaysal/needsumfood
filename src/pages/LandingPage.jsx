@@ -138,11 +138,11 @@ function LandingPage() {
                         <div className={styles.actions}>
                             {cat.hidden ? (
                                 <button className={styles.iconBtn} title="Show" onClick={() => handleShow(cat._id)}>
-                                    👁️‍🗨️
+                                    👀
                                 </button>
                             ) : (
                                 <button className={styles.iconBtn} title="Hide" onClick={() => handleHide(cat._id)}>
-                                    👁️
+                                    🙈
                                 </button>
                             )}
                             <button
@@ -150,7 +150,7 @@ function LandingPage() {
                                 title="Delete"
                                 onClick={() => handleDelete(cat._id)}
                             >
-                                ×
+                                🗑️
                             </button>
                         </div>
                     </div>
@@ -178,4 +178,3 @@ function LandingPage() {
 }
 
 export default LandingPage
-
