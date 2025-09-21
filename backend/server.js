@@ -22,9 +22,11 @@ console.log("Loaded MONGO_URI:", process.env.MONGO_URI); // sanity check
 const app = express();
 // Allow requests from your Vite dev server
 const allowedOrigins = [
-    "http://localhost:5173", // dev
+    "http://localhost:5173", // Vite dev
+    "http://localhost:4173", // Vite preview
     "https://kdaysal.github.io", // GitHub Pages (prod)
 ];
+
 
 app.use(
     cors({
