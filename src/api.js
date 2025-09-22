@@ -2,6 +2,10 @@
 const BASE_URL =
     import.meta.env.VITE_API_BASE || "http://localhost:5001";
 
+/* ===========================
+   Categories
+   =========================== */
+
 // Fetch categories with optional view filter: "visible", "hidden", "all"
 export async function fetchCategories(view = "visible") {
     const res = await fetch(`${BASE_URL}/categories?view=${view}`);
@@ -43,5 +47,56 @@ export async function deleteCategory(id) {
         method: "DELETE"
     });
     if (!res.ok) throw new Error("Failed to delete category");
+    return res.json();
+}
+
+/* ===========================
+   Items
+   =========================== */
+
+// Fetch items for a category
+export async function fetchItems(categoryId, view = "visible", status) {
+    const params = new URLSearchParams({
+        view
+    });
+    if (status) params.append("status", status);
+
+    const res = await fetch(`${BASE_URL}/categories/${categoryId}/items?${params}`);
+    if (!res.ok) throw new Error("Failed to load items");
+    return res.json();
+}
+
+// Create a new item under a category
+export async function createItem(categoryId, payload) {
+    const res = await fetch(`${BASE_URL}/categories/${categoryId}/items`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Failed to create item");
+    return res.json();
+}
+
+// Update an item
+export async function updateItem(itemId, payload) {
+    const res = await fetch(`${BASE_URL}/items/${itemId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Failed to update item");
+    return res.json();
+}
+
+// Delete an item
+export async function deleteItem(itemId) {
+    const res = await fetch(`${BASE_URL}/items/${itemId}`, {
+        method: "DELETE"
+    });
+    if (!res.ok) throw new Error("Failed to delete item");
     return res.json();
 }
