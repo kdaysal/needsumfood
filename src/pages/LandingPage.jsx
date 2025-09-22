@@ -1,5 +1,6 @@
 // src/pages/LandingPage.jsx
 import React, { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 
@@ -44,22 +45,22 @@ function LandingPage() {
         }
     }
 
-    // Hide a category by updating its "hidden" flag (refetch afterwards)
+    // Hide a category
     const handleHide = async (id) => {
         try {
             await updateCategory(id, { hidden: true })
-            const data = await fetchCategories(view) // refresh categories from backend
+            const data = await fetchCategories(view)
             setCategories(data)
         } catch (err) {
             console.error("Error hiding category:", err)
         }
     }
 
-    // Show category (from hidden view)
+    // Show category
     const handleShow = async (id) => {
         try {
             await updateCategory(id, { hidden: false })
-            const data = await fetchCategories(view) // refresh categories from backend
+            const data = await fetchCategories(view)
             setCategories(data)
         } catch (e) {
             console.error("Error showing category:", e)
@@ -73,7 +74,7 @@ function LandingPage() {
         setModalCategoryId(null)
         try {
             await deleteCategory(id)
-            const data = await fetchCategories(view) // refresh categories from backend
+            const data = await fetchCategories(view)
             setCategories(data)
         } catch (e) {
             console.error("Error deleting category:", e)
@@ -133,27 +134,44 @@ function LandingPage() {
                 {!loading && categories.length === 0 && <div className={styles.empty}>No categories in this view.</div>}
 
                 {categories.map((cat) => (
-                    <div key={cat._id} className={styles.card}>
+                    <Link key={cat._id} to={`/category/${cat._id}`} className={styles.card}>
                         <span className={styles.cardTitle}>{cat.name}</span>
                         <div className={styles.actions}>
                             {cat.hidden ? (
-                                <button className={styles.iconBtn} title="Show" onClick={() => handleShow(cat._id)}>
+                                <button
+                                    className={styles.iconBtn}
+                                    title="Show"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        handleShow(cat._id)
+                                    }}
+                                >
                                     👀
                                 </button>
                             ) : (
-                                <button className={styles.iconBtn} title="Hide" onClick={() => handleHide(cat._id)}>
+                                <button
+                                    className={styles.iconBtn}
+                                    title="Hide"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        handleHide(cat._id)
+                                    }}
+                                >
                                     🙈
                                 </button>
                             )}
                             <button
                                 className={`${styles.iconBtn} ${styles.danger}`}
                                 title="Delete"
-                                onClick={() => handleDelete(cat._id)}
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    handleDelete(cat._id)
+                                }}
                             >
                                 🗑️
                             </button>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </main>
 
