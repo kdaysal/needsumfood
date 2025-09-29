@@ -1,7 +1,7 @@
 // src/pages/CategoryPage.jsx
 import React, { useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom"
-import styles from "./LandingPage.module.css"
+import styles from "./CategoryPage.module.css" // now scoped
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
 
 function CategoryPage() {
@@ -156,6 +156,12 @@ function CategoryPage() {
                     </div>
                 ))}
             </main>
+
+            {/* Debug view */}
+            <section className={styles.debug}>
+                <h2>Debug View</h2>
+                <pre>{JSON.stringify(items, null, 2)}</pre>
+            </section>
         </div>
     )
 }
