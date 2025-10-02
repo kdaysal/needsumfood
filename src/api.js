@@ -2,16 +2,13 @@
 const BASE_URL =
     import.meta.env.VITE_API_BASE || "http://localhost:5001";
 
-/* ----------------- Category APIs ----------------- */
-
-// Fetch categories with optional view filter: "visible", "hidden", "all"
+// ===== Categories =====
 export async function fetchCategories(view = "visible") {
     const res = await fetch(`${BASE_URL}/categories?view=${view}`);
     if (!res.ok) throw new Error("Failed to load categories");
     return res.json();
 }
 
-// Create a new category
 export async function createCategory(name) {
     const res = await fetch(`${BASE_URL}/categories`, {
         method: "POST",
@@ -26,7 +23,6 @@ export async function createCategory(name) {
     return res.json();
 }
 
-// Update an existing category (e.g., hide/show or rename)
 export async function updateCategory(id, payload) {
     const res = await fetch(`${BASE_URL}/categories/${id}`, {
         method: "PATCH",
@@ -39,7 +35,6 @@ export async function updateCategory(id, payload) {
     return res.json();
 }
 
-// Delete a category
 export async function deleteCategory(id) {
     const res = await fetch(`${BASE_URL}/categories/${id}`, {
         method: "DELETE"
@@ -48,18 +43,15 @@ export async function deleteCategory(id) {
     return res.json();
 }
 
-/* ----------------- Item APIs ----------------- */
-
-// Fetch items for a category
-export async function fetchItems(categoryId, view = "visible") {
-    const res = await fetch(`${BASE_URL}/categories/${categoryId}/items?view=${view}`);
+// ===== Items =====
+export async function fetchItems(categoryId) {
+    const res = await fetch(`${BASE_URL}/items/${categoryId}`);
     if (!res.ok) throw new Error("Failed to load items");
-    return res.json();
+    return res.json(); // returns { category, items }
 }
 
-// Create a new item in a category
 export async function createItem(categoryId, name) {
-    const res = await fetch(`${BASE_URL}/categories/${categoryId}/items`, {
+    const res = await fetch(`${BASE_URL}/items/${categoryId}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -72,9 +64,8 @@ export async function createItem(categoryId, name) {
     return res.json();
 }
 
-// Update an item (e.g., hide/show, notes, location, need toggle)
-export async function updateItem(itemId, payload) {
-    const res = await fetch(`${BASE_URL}/items/${itemId}`, {
+export async function updateItem(id, payload) {
+    const res = await fetch(`${BASE_URL}/items/${id}`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json"
@@ -85,9 +76,8 @@ export async function updateItem(itemId, payload) {
     return res.json();
 }
 
-// Delete an item
-export async function deleteItem(itemId) {
-    const res = await fetch(`${BASE_URL}/items/${itemId}`, {
+export async function deleteItem(id) {
+    const res = await fetch(`${BASE_URL}/items/${id}`, {
         method: "DELETE"
     });
     if (!res.ok) throw new Error("Failed to delete item");

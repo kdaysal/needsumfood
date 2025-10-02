@@ -1,22 +1,24 @@
 // src/pages/CategoryPage.jsx
 import React, { useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom"
-import styles from "./CategoryPage.module.css" // now scoped
+import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
 
 function CategoryPage() {
     const { id } = useParams()
+    const [categoryName, setCategoryName] = useState("")
     const [items, setItems] = useState([])
     const [newItem, setNewItem] = useState("")
     const [loading, setLoading] = useState(false)
 
-    // Load items
+    // Load items + category name
     useEffect(() => {
         ;(async () => {
             setLoading(true)
             try {
-                const data = await fetchItems(id)
-                setItems(data)
+                const { category, items } = await fetchItems(id)
+                setCategoryName(category.name)
+                setItems(items)
             } catch (e) {
                 console.error("Error fetching items:", e)
             } finally {
@@ -58,7 +60,7 @@ function CategoryPage() {
         }
     }
 
-    // Update notes or location inline
+    // Update notes/location inline
     const handleFieldChange = async (itemId, field, value) => {
         try {
             const updated = await updateItem(itemId, { [field]: value })
@@ -81,7 +83,7 @@ function CategoryPage() {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <h1 className={styles.title}>Category Items</h1>
+                <h1 className={styles.title}>{categoryName || "Category Items"}</h1>
                 <Link to="/" className={styles.backLink}>
                     ← Back
                 </Link>
@@ -101,6 +103,11 @@ function CategoryPage() {
                     Add
                 </button>
             </div>
+
+            {/* Debug info */}
+            <pre style={{ background: "#f6f6f6", padding: "0.5rem" }}>
+                {JSON.stringify({ id, categoryName, itemsCount: items.length }, null, 2)}
+            </pre>
 
             {/* List */}
             <main className={styles.list}>
@@ -156,12 +163,6 @@ function CategoryPage() {
                     </div>
                 ))}
             </main>
-
-            {/* Debug view */}
-            <section className={styles.debug}>
-                <h2>Debug View</h2>
-                <pre>{JSON.stringify(items, null, 2)}</pre>
-            </section>
         </div>
     )
 }

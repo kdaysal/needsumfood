@@ -14,10 +14,10 @@ const __dirname = path.dirname(__filename);
 
 // Explicitly tell dotenv where to look
 dotenv.config({
-    path: path.join(__dirname, ".env"),
+    path: path.join(__dirname, ".env")
 });
 
-console.log("Loaded MONGO_URI:", process.env.MONGO_URI);
+console.log("Loaded MONGO_URI:", process.env.MONGO_URI); // sanity check
 
 const app = express();
 // Allow requests from your Vite dev server + GitHub Pages
@@ -47,6 +47,19 @@ mongoose
     .catch((err) => console.error(err));
 
 // Schemas + Models
+const CategorySchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    hidden: {
+        type: Boolean,
+        default: false
+    },
+}, {
+    timestamps: true
+});
+
 const ItemSchema = new mongoose.Schema({
     categoryId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -61,6 +74,10 @@ const ItemSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    need: {
+        type: Boolean,
+        default: true
+    },
     notes: {
         type: String,
         default: ""
@@ -69,23 +86,6 @@ const ItemSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    need: {
-        type: Boolean,
-        default: true
-    }, // true = need, false = have
-}, {
-    timestamps: true
-});
-
-const CategorySchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    hidden: {
-        type: Boolean,
-        default: false
-    },
 }, {
     timestamps: true
 });
@@ -93,16 +93,18 @@ const CategorySchema = new mongoose.Schema({
 const Category = mongoose.model("Category", CategorySchema);
 const Item = mongoose.model("Item", ItemSchema);
 
-// ----------------- Category Routes -----------------
+// Routes
+
+// Categories
 app.get("/categories", async (req, res) => {
     const {
         view = "visible"
     } = req.query;
-
     const filter =
         view === "hidden" ? {
             hidden: true
-        } : view === "all" ? {} : {
+        } :
+        view === "all" ? {} : {
             hidden: false
         };
 
@@ -160,46 +162,62 @@ app.delete("/categories/:id", async (req, res) => {
     await Category.findByIdAndDelete(id);
     await Item.deleteMany({
         categoryId: id
-    }); // clean up items
+    });
     res.json({
         success: true
     });
 });
 
-// ----------------- Item Routes -----------------
-app.get("/categories/:id/items", async (req, res) => {
+// Items
+app.get("/items/:categoryId", async (req, res) => {
     const {
-        id
+        categoryId
     } = req.params;
-    const {
-        view = "visible"
-    } = req.query;
 
-    const filter = {
-        categoryId: id
-    };
-    if (view === "hidden") filter.hidden = true;
-    else if (view !== "all") filter.hidden = false;
+    try {
+        const category = await Category.findById(categoryId);
+        if (!category) return res.status(404).json({
+            error: "Category not found"
+        });
 
-    const items = await Item.find(filter).sort({
-        createdAt: 1
-    });
-    res.json(items);
+        const items = await Item.find({
+            categoryId
+        }).sort({
+            createdAt: 1
+        });
+        res.json({
+            category,
+            items
+        });
+    } catch (err) {
+        console.error("Error fetching items:", err);
+        res.status(500).json({
+            error: "Failed to fetch items"
+        });
+    }
 });
 
-app.post("/categories/:id/items", async (req, res) => {
+app.post("/items/:categoryId", async (req, res) => {
     const {
-        id
+        categoryId
     } = req.params;
     const {
         name
     } = req.body;
-    const item = new Item({
-        categoryId: id,
-        name
-    });
-    await item.save();
-    res.json(item);
+
+    try {
+        const item = new Item({
+            categoryId,
+            name
+        });
+        await item.save();
+        res.json(item);
+    } catch (err) {
+        console.error("Error creating item:", err);
+        res.status(500).json({
+            error: "Failed to create item"
+        });
+    }
 });
 
 app.patch("/items/:id", async (req, res) => {
@@ -209,18 +227,18 @@ app.patch("/items/:id", async (req, res) => {
     const {
         name,
         hidden,
+        need,
         notes,
-        location,
-        need
+        location
     } = req.body;
 
     try {
         const update = {};
         if (typeof name === "string") update.name = name.trim();
         if (typeof hidden === "boolean") update.hidden = hidden;
+        if (typeof need === "boolean") update.need = need;
         if (typeof notes === "string") update.notes = notes;
         if (typeof location === "string") update.location = location;
-        if (typeof need === "boolean") update.need = need;
 
         const item = await Item.findByIdAndUpdate(id, update, {
             new: true
@@ -248,7 +266,7 @@ app.delete("/items/:id", async (req, res) => {
     });
 });
 
-// ----------------- Health -----------------
+// Health check
 app.get("/health", (req, res) => {
     res.json({
         ok: true
