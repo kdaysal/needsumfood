@@ -11,6 +11,7 @@ function CategoryPage() {
     const [items, setItems] = useState([])
     const [newItem, setNewItem] = useState("")
     const [modalItemId, setModalItemId] = useState(null)
+    const [itemView, setItemView] = useState("visible")
     const [loading, setLoading] = useState(false)
 
     // Load items + category name
@@ -86,6 +87,12 @@ function CategoryPage() {
     }
     const cancelDelete = () => setModalItemId(null)
 
+    const filteredItems = items.filter((item) => {
+        if (itemView === "all") return true
+        if (itemView === "hidden") return item.hidden
+        return !item.hidden
+    })
+
     return (
         <div className={styles.container}>
             <header className={styles.header}>
@@ -93,6 +100,27 @@ function CategoryPage() {
                 <Link to="/" className={styles.backLink}>
                     ← Back
                 </Link>
+
+                <div className={styles.segment}>
+                    <button
+                        className={`${styles.segmentBtn} ${itemView === "visible" ? styles.active : ""}`}
+                        onClick={() => setItemView("visible")}
+                    >
+                        Visible
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${itemView === "hidden" ? styles.active : ""}`}
+                        onClick={() => setItemView("hidden")}
+                    >
+                        Hidden
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${itemView === "all" ? styles.active : ""}`}
+                        onClick={() => setItemView("all")}
+                    >
+                        All
+                    </button>
+                </div>
             </header>
 
             {/* Add item */}
@@ -112,7 +140,17 @@ function CategoryPage() {
 
             {/* Debug info */}
             <pre style={{ background: "#f6f6f6", padding: "0.5rem" }}>
-                {JSON.stringify({ id, categoryName, itemsCount: items.length }, null, 2)}
+                {JSON.stringify(
+                    {
+                        id,
+                        categoryName,
+                        view: itemView,
+                        totalItems: items.length,
+                        filteredCount: filteredItems.length,
+                    },
+                    null,
+                    2
+                )}
             </pre>
 
             {/* List */}
@@ -121,8 +159,11 @@ function CategoryPage() {
                 {!loading && items.length === 0 && (
                     <div className={styles.empty}>No items yet — add some to get started!</div>
                 )}
+                {!loading && items.length > 0 && filteredItems.length === 0 && (
+                    <div className={styles.empty}>No items in this view.</div>
+                )}
 
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                     <div key={item._id} className={styles.card}>
                         <span className={styles.cardTitle}>{item.name}</span>
 
