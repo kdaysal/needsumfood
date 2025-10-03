@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
+import ConfirmModal from "../components/ConfirmModal"
 
 function LandingPage() {
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
@@ -175,22 +176,13 @@ function LandingPage() {
                 ))}
             </main>
 
-            {/* Delete confirm modal */}
-            {modalCategoryId && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modal}>
-                        <p>Are you sure you want to permanently delete this category?</p>
-                        <div className={styles.modalActions}>
-                            <button className={styles.confirm} onClick={confirmDelete}>
-                                Yes
-                            </button>
-                            <button className={styles.cancel} onClick={cancelDelete}>
-                                No
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ConfirmModal
+                open={Boolean(modalCategoryId)}
+                styles={styles}
+                message="Are you sure you want to permanently delete this category?"
+                onConfirm={confirmDelete}
+                onCancel={cancelDelete}
+            />
         </div>
     )
 }

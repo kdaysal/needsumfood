@@ -3,12 +3,14 @@ import React, { useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
+import ConfirmModal from "../components/ConfirmModal"
 
 function CategoryPage() {
     const { id } = useParams()
     const [categoryName, setCategoryName] = useState("")
     const [items, setItems] = useState([])
     const [newItem, setNewItem] = useState("")
+    const [modalItemId, setModalItemId] = useState(null)
     const [loading, setLoading] = useState(false)
 
     // Load items + category name
@@ -70,8 +72,11 @@ function CategoryPage() {
         }
     }
 
-    // Delete
-    const handleDelete = async (itemId) => {
+    // Delete with confirm
+    const handleDelete = (itemId) => setModalItemId(itemId)
+    const confirmDelete = async () => {
+        const itemId = modalItemId
+        setModalItemId(null)
         try {
             await deleteItem(itemId)
             setItems((prev) => prev.filter((it) => it._id !== itemId))
@@ -79,6 +84,7 @@ function CategoryPage() {
             console.error("Error deleting item:", e)
         }
     }
+    const cancelDelete = () => setModalItemId(null)
 
     return (
         <div className={styles.container}>
@@ -163,6 +169,14 @@ function CategoryPage() {
                     </div>
                 ))}
             </main>
+
+            <ConfirmModal
+                open={Boolean(modalItemId)}
+                styles={styles}
+                message="Are you sure you want to permanently delete this item?"
+                onConfirm={confirmDelete}
+                onCancel={cancelDelete}
+            />
         </div>
     )
 }
