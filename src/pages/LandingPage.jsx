@@ -1,73 +1,20 @@
 // src/pages/LandingPage.jsx
 import React, { useEffect, useMemo, useState } from "react"
-import { Link, useBlocker } from "react-router-dom"
+import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 
 function LandingPage() {
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
     const [categories, setCategories] = useState([])
-    the[(newCategory, setNewCategory)] = useState("")
+    const [newCategory, setNewCategory] = useState("")
     const [modalCategoryId, setModalCategoryId] = useState(null)
     const [loading, setLoading] = useState(false)
 
     const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
-<<<<<<< ours
-<<<<<<< ours
-=======
->>>>>>> theirs
-    const { state: blockerState, proceed, reset } = useBlocker(hasUnsavedChanges)
-
-    useEffect(() => {
-        if (blockerState !== "blocked") return
-
-<<<<<<< ours
-        const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave this page?")
-=======
-        const shouldLeave = window.confirm(
-            "You have unsaved changes. Are you sure you want to leave this page?",
-        )
->>>>>>> theirs
-
-        if (shouldLeave) {
-            proceed?.()
-        } else {
-            reset?.()
-        }
-    }, [blockerState, proceed, reset])
-
-    useEffect(() => {
-        if (!hasUnsavedChanges && blockerState === "blocked") {
-            reset?.()
-        }
-    }, [hasUnsavedChanges, blockerState, reset])
-<<<<<<< ours
-=======
-    const blocker = useBlocker(hasUnsavedChanges)
-
-    useEffect(() => {
-        if (blocker.state !== "blocked") return
-
-        const shouldLeave = window.confirm(
-            "You have unsaved changes. Are you sure you want to leave this page?",
-        )
-
-        if (shouldLeave) {
-            blocker.proceed?.()
-        } else {
-            blocker.reset?.()
-        }
-    }, [blocker])
-
-    useEffect(() => {
-        if (!hasUnsavedChanges && blocker.state === "blocked") {
-            blocker.reset?.()
-        }
-    }, [hasUnsavedChanges, blocker])
->>>>>>> theirs
-=======
->>>>>>> theirs
+    useConfirmingBlocker(hasUnsavedChanges)
 
     // Load categories whenever view changes
     useEffect(() => {
