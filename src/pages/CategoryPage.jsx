@@ -1,6 +1,6 @@
 // src/pages/CategoryPage.jsx
-import React, { useEffect, useState } from "react"
-import { useParams, Link } from "react-router-dom"
+import React, { useEffect, useMemo, useState } from "react"
+import { useParams, Link, unstable_useBlocker } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
@@ -9,10 +9,23 @@ function CategoryPage() {
     const { id } = useParams()
     const [categoryName, setCategoryName] = useState("")
     const [items, setItems] = useState([])
+    const [draftItems, setDraftItems] = useState({})
+    const [dirtyItemIds, setDirtyItemIds] = useState(() => new Set())
     const [newItem, setNewItem] = useState("")
     const [modalItemId, setModalItemId] = useState(null)
     const [itemView, setItemView] = useState("visible")
     const [loading, setLoading] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [saveError, setSaveError] = useState(null)
+
+    const hasUnsavedChanges = useMemo(() => dirtyItemIds.size > 0, [dirtyItemIds])
+    const blocker = unstable_useBlocker(hasUnsavedChanges)
+
+    const toDraftMap = (list) =>
+        list.reduce((acc, item) => {
+            acc[item._id] = { ...item }
+            return acc
+        }, {})
 
     // Load items + category name
     useEffect(() => {
@@ -22,6 +35,8 @@ function CategoryPage() {
                 const { category, items } = await fetchItems(id)
                 setCategoryName(category.name)
                 setItems(items)
+                setDraftItems(toDraftMap(items))
+                setDirtyItemIds(new Set())
             } catch (e) {
                 console.error("Error fetching items:", e)
             } finally {
@@ -37,6 +52,7 @@ function CategoryPage() {
         try {
             const created = await createItem(id, name)
             setItems((prev) => [...prev, created])
+            setDraftItems((prev) => ({ ...prev, [created._id]: { ...created } }))
             setNewItem("")
         } catch (e) {
             console.error("Error adding item:", e)
@@ -48,6 +64,13 @@ function CategoryPage() {
         try {
             const updated = await updateItem(itemId, { hidden: !hidden })
             setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
+            setDraftItems((prev) => {
+                const existing = prev[itemId] ?? updated
+                return {
+                    ...prev,
+                    [itemId]: { ...updated, ...existing, hidden: updated.hidden },
+                }
+            })
         } catch (e) {
             console.error("Error toggling item:", e)
         }
@@ -58,19 +81,103 @@ function CategoryPage() {
         try {
             const updated = await updateItem(itemId, { need: !need })
             setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
+            setDraftItems((prev) => {
+                const existing = prev[itemId] ?? updated
+                return {
+                    ...prev,
+                    [itemId]: { ...updated, ...existing, need: updated.need },
+                }
+            })
         } catch (e) {
             console.error("Error toggling need:", e)
         }
     }
 
     // Update notes/location inline
-    const handleFieldChange = async (itemId, field, value) => {
-        try {
-            const updated = await updateItem(itemId, { [field]: value })
-            setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
-        } catch (e) {
-            console.error(`Error updating ${field}:`, e)
+    const handleFieldChange = (itemId, field, value) => {
+        setDraftItems((prev) => {
+            const existing = prev[itemId] ?? items.find((it) => it._id === itemId) ?? {}
+            return {
+                ...prev,
+                [itemId]: { ...existing, [field]: value },
+            }
+        })
+        setDirtyItemIds((prev) => {
+            const next = new Set(prev)
+            next.add(itemId)
+            return next
+        })
+        setSaveError(null)
+    }
+
+    const handleSave = async () => {
+        const dirtyIds = Array.from(dirtyItemIds)
+        if (dirtyIds.length === 0) return
+
+        setSaving(true)
+        setSaveError(null)
+
+        const results = await Promise.allSettled(
+            dirtyIds.map(async (itemId) => {
+                const draft = draftItems[itemId]
+                const original = items.find((it) => it._id === itemId)
+                if (!draft || !original) {
+                    throw new Error("Item not found")
+                }
+
+                const payload = Object.keys(draft).reduce((acc, key) => {
+                    if (key === "_id") return acc
+                    if (draft[key] !== original[key]) acc[key] = draft[key]
+                    return acc
+                }, {})
+
+                if (Object.keys(payload).length === 0) {
+                    return { ...original, ...draft }
+                }
+
+                return updateItem(itemId, payload)
+            })
+        )
+
+        const updatedMap = {}
+        const failedIds = []
+
+        results.forEach((result, index) => {
+            const itemId = dirtyIds[index]
+            if (result.status === "fulfilled") {
+                updatedMap[itemId] = result.value
+            } else {
+                failedIds.push(itemId)
+            }
+        })
+
+        if (Object.keys(updatedMap).length > 0) {
+            setItems((prev) => prev.map((item) => (updatedMap[item._id] ? updatedMap[item._id] : item)))
+            setDraftItems((prev) => {
+                const next = { ...prev }
+                Object.entries(updatedMap).forEach(([itemId, value]) => {
+                    next[itemId] = { ...value }
+                })
+                return next
+            })
+            setDirtyItemIds((prev) => {
+                const next = new Set(prev)
+                Object.keys(updatedMap).forEach((itemId) => next.delete(itemId))
+                return next
+            })
         }
+
+        if (failedIds.length > 0) {
+            setSaveError("Some items failed to save. Please try again.")
+        } else {
+            setSaveError(null)
+        }
+
+        if (blocker.state === "blocked") {
+            blocker.reset()
+        }
+
+        setSaving(false)
     }
 
     // Delete with confirm
@@ -81,6 +188,16 @@ function CategoryPage() {
         try {
             await deleteItem(itemId)
             setItems((prev) => prev.filter((it) => it._id !== itemId))
+            setDraftItems((prev) => {
+                const next = { ...prev }
+                delete next[itemId]
+                return next
+            })
+            setDirtyItemIds((prev) => {
+                const next = new Set(prev)
+                next.delete(itemId)
+                return next
+            })
         } catch (e) {
             console.error("Error deleting item:", e)
         }
@@ -93,14 +210,43 @@ function CategoryPage() {
         return !item.hidden
     })
 
+    useEffect(() => {
+        const handleBeforeUnload = (event) => {
+            if (!hasUnsavedChanges) return
+            event.preventDefault()
+            event.returnValue = ""
+        }
+
+        window.addEventListener("beforeunload", handleBeforeUnload)
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+    }, [hasUnsavedChanges])
+
+    useEffect(() => {
+        if (blocker.state === "blocked") {
+            const confirmNavigation = window.confirm(
+                "You have unsaved changes. Are you sure you want to leave this page?"
+            )
+            if (confirmNavigation) {
+                blocker.proceed()
+            } else {
+                blocker.reset()
+            }
+        }
+    }, [blocker])
+
     return (
         <div className={styles.container}>
             <header className={styles.header}>
                 <h1 className={styles.title}>{categoryName || "Category Items"}</h1>
-                <Link to="/" className={styles.backLink}>
-                    ← Back
-                </Link>
-
+                <div className={styles.headerRow}>
+                    <Link to="/" className={styles.backLink}>
+                        ← Back
+                    </Link>
+                    <button className={styles.saveBtn} onClick={handleSave} disabled={!hasUnsavedChanges || saving}>
+                        {saving ? "Saving…" : "Save"}
+                    </button>
+                </div>
+                {saveError && <div className={styles.errorText}>{saveError}</div>}
                 <div className={styles.segment}>
                     <button
                         className={`${styles.segmentBtn} ${itemView === "visible" ? styles.active : ""}`}
@@ -172,14 +318,14 @@ function CategoryPage() {
                                 className={styles.input}
                                 type="text"
                                 placeholder="Notes"
-                                value={item.notes || ""}
+                                value={draftItems[item._id]?.notes || ""}
                                 onChange={(e) => handleFieldChange(item._id, "notes", e.target.value)}
                             />
                             <input
                                 className={styles.input}
                                 type="text"
                                 placeholder="Location"
-                                value={item.location || ""}
+                                value={draftItems[item._id]?.location || ""}
                                 onChange={(e) => handleFieldChange(item._id, "location", e.target.value)}
                             />
                         </div>
