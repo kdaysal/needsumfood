@@ -19,11 +19,19 @@ const router = createBrowserRouter(
             ],
         },
     ],
+<<<<<<< ours
     { basename: "/needsumfood" }
+=======
+    { basename: "/needsumfood" },
+>>>>>>> theirs
 )
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
         <RouterProvider router={router} />
+<<<<<<< ours
     </React.StrictMode>
+=======
+    </React.StrictMode>,
+>>>>>>> theirs
 )
