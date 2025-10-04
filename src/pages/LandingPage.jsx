@@ -1,6 +1,6 @@
 // src/pages/LandingPage.jsx
 import React, { useEffect, useMemo, useState } from "react"
-import { Link, unstable_useBlocker } from "react-router-dom"
+import { Link, useBlocker } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
@@ -8,22 +8,30 @@ import ConfirmModal from "../components/ConfirmModal"
 function LandingPage() {
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
     const [categories, setCategories] = useState([])
-    const [draftCategories, setDraftCategories] = useState({})
-    const [dirtyCategoryIds, setDirtyCategoryIds] = useState(() => new Set())
     const [newCategory, setNewCategory] = useState("")
     const [modalCategoryId, setModalCategoryId] = useState(null)
     const [loading, setLoading] = useState(false)
-    const [saving, setSaving] = useState(false)
-    const [saveError, setSaveError] = useState(null)
 
-    const hasUnsavedChanges = useMemo(() => dirtyCategoryIds.size > 0, [dirtyCategoryIds])
-    const blocker = unstable_useBlocker(hasUnsavedChanges)
+    const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
+    const blocker = useBlocker(hasUnsavedChanges)
 
-    const toDraftMap = (list) =>
-        list.reduce((acc, item) => {
-            acc[item._id] = { ...item }
-            return acc
-        }, {})
+    useEffect(() => {
+        if (blocker.state !== "blocked") return
+
+        const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave this page?")
+
+        if (shouldLeave) {
+            blocker.proceed?.()
+        } else {
+            blocker.reset?.()
+        }
+    }, [blocker.state, blocker])
+
+    useEffect(() => {
+        if (!hasUnsavedChanges && blocker.state === "blocked") {
+            blocker.reset?.()
+        }
+    }, [hasUnsavedChanges, blocker.state, blocker])
 
     // Load categories whenever view changes
     useEffect(() => {
@@ -32,7 +40,6 @@ function LandingPage() {
             try {
                 const data = await fetchCategories(view)
                 setCategories(data)
-                setDraftCategories((prev) => ({ ...prev, ...toDraftMap(data) }))
             } catch (e) {
                 console.error("Error fetching categories:", e)
             } finally {
@@ -54,7 +61,6 @@ function LandingPage() {
         try {
             const created = await createCategory(name)
             if (view !== "hidden") setCategories((prev) => [...prev, created])
-            setDraftCategories((prev) => ({ ...prev, [created._id]: { ...created } }))
             setNewCategory("")
         } catch (e) {
             console.error("Error adding category:", e)
@@ -64,23 +70,9 @@ function LandingPage() {
     // Hide a category
     const handleHide = async (id) => {
         try {
-            const updated = await updateCategory(id, { hidden: true })
-            setCategories((prev) =>
-                prev
-                    .map((cat) => (cat._id === id ? updated : cat))
-                    .filter((cat) => {
-                        if (view === "visible") return !cat.hidden
-                        if (view === "hidden") return cat.hidden
-                        return true
-                    })
-            )
-            setDraftCategories((prev) => {
-                const existing = prev[id] ?? updated
-                return {
-                    ...prev,
-                    [id]: { ...updated, ...existing, hidden: updated.hidden },
-                }
-            })
+            await updateCategory(id, { hidden: true })
+            const data = await fetchCategories(view)
+            setCategories(data)
         } catch (err) {
             console.error("Error hiding category:", err)
         }
@@ -89,23 +81,9 @@ function LandingPage() {
     // Show category
     const handleShow = async (id) => {
         try {
-            const updated = await updateCategory(id, { hidden: false })
-            setCategories((prev) =>
-                prev
-                    .map((cat) => (cat._id === id ? updated : cat))
-                    .filter((cat) => {
-                        if (view === "visible") return !cat.hidden
-                        if (view === "hidden") return cat.hidden
-                        return true
-                    })
-            )
-            setDraftCategories((prev) => {
-                const existing = prev[id] ?? updated
-                return {
-                    ...prev,
-                    [id]: { ...updated, ...existing, hidden: updated.hidden },
-                }
-            })
+            await updateCategory(id, { hidden: false })
+            const data = await fetchCategories(view)
+            setCategories(data)
         } catch (e) {
             console.error("Error showing category:", e)
         }
@@ -118,114 +96,13 @@ function LandingPage() {
         setModalCategoryId(null)
         try {
             await deleteCategory(id)
-            setCategories((prev) => prev.filter((cat) => cat._id !== id))
-            setDraftCategories((prev) => {
-                const next = { ...prev }
-                delete next[id]
-                return next
-            })
-            setDirtyCategoryIds((prev) => {
-                const next = new Set(prev)
-                next.delete(id)
-                return next
-            })
+            const data = await fetchCategories(view)
+            setCategories(data)
         } catch (e) {
             console.error("Error deleting category:", e)
         }
     }
     const cancelDelete = () => setModalCategoryId(null)
-
-    const handleSave = async () => {
-        const dirtyIds = Array.from(dirtyCategoryIds)
-        if (dirtyIds.length === 0) return
-
-        setSaving(true)
-        setSaveError(null)
-
-        const results = await Promise.allSettled(
-            dirtyIds.map(async (categoryId) => {
-                const draft = draftCategories[categoryId]
-                const original = categories.find((cat) => cat._id === categoryId)
-                if (!draft || !original) throw new Error("Category not found")
-
-                const payload = Object.keys(draft).reduce((acc, key) => {
-                    if (key === "_id") return acc
-                    if (draft[key] !== original[key]) acc[key] = draft[key]
-                    return acc
-                }, {})
-
-                if (Object.keys(payload).length === 0) {
-                    return { ...original, ...draft }
-                }
-
-                return updateCategory(categoryId, payload)
-            })
-        )
-
-        const updatedMap = {}
-        const failedIds = []
-
-        results.forEach((result, index) => {
-            const categoryId = dirtyIds[index]
-            if (result.status === "fulfilled") {
-                updatedMap[categoryId] = result.value
-            } else {
-                failedIds.push(categoryId)
-            }
-        })
-
-        if (Object.keys(updatedMap).length > 0) {
-            setCategories((prev) => prev.map((cat) => (updatedMap[cat._id] ? updatedMap[cat._id] : cat)))
-            setDraftCategories((prev) => {
-                const next = { ...prev }
-                Object.entries(updatedMap).forEach(([categoryId, value]) => {
-                    next[categoryId] = { ...value }
-                })
-                return next
-            })
-            setDirtyCategoryIds((prev) => {
-                const next = new Set(prev)
-                Object.keys(updatedMap).forEach((categoryId) => next.delete(categoryId))
-                return next
-            })
-        }
-
-        if (failedIds.length > 0) {
-            setSaveError("Some categories failed to save. Please try again.")
-        } else {
-            setSaveError(null)
-        }
-
-        if (blocker.state === "blocked") {
-            blocker.reset()
-        }
-
-        setSaving(false)
-    }
-
-    useEffect(() => {
-        const handleBeforeUnload = (event) => {
-            if (!hasUnsavedChanges) return
-            event.preventDefault()
-            event.returnValue = ""
-        }
-
-        window.addEventListener("beforeunload", handleBeforeUnload)
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-    }, [hasUnsavedChanges])
-
-    useEffect(() => {
-        if (blocker.state === "blocked") {
-            const confirmNavigation = window.confirm(
-                "You have unsaved changes. Are you sure you want to leave this page?"
-            )
-            if (confirmNavigation) {
-                blocker.proceed()
-            } else {
-                blocker.reset()
-            }
-        }
-    }, [blocker])
 
     return (
         <div className={styles.container}>
@@ -235,33 +112,27 @@ function LandingPage() {
                     <p className={styles.subtitle}>Welcome, User!</p>
                 </div>
 
-                {/* Actions */}
-                <div className={styles.headerRow}>
-                    <button className={styles.saveBtn} onClick={handleSave} disabled={!hasUnsavedChanges || saving}>
-                        {saving ? "Saving…" : "Save"}
+                {/* View toggle */}
+                <div className={styles.segment}>
+                    <button
+                        className={`${styles.segmentBtn} ${view === "visible" ? styles.active : ""}`}
+                        onClick={() => setView("visible")}
+                    >
+                        Visible
                     </button>
-                    <div className={styles.segment}>
-                        <button
-                            className={`${styles.segmentBtn} ${view === "visible" ? styles.active : ""}`}
-                            onClick={() => setView("visible")}
-                        >
-                            Visible
-                        </button>
-                        <button
-                            className={`${styles.segmentBtn} ${view === "hidden" ? styles.active : ""}`}
-                            onClick={() => setView("hidden")}
-                        >
-                            Hidden
-                        </button>
-                        <button
-                            className={`${styles.segmentBtn} ${view === "all" ? styles.active : ""}`}
-                            onClick={() => setView("all")}
-                        >
-                            All
-                        </button>
-                    </div>
+                    <button
+                        className={`${styles.segmentBtn} ${view === "hidden" ? styles.active : ""}`}
+                        onClick={() => setView("hidden")}
+                    >
+                        Hidden
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${view === "all" ? styles.active : ""}`}
+                        onClick={() => setView("all")}
+                    >
+                        All
+                    </button>
                 </div>
-                {saveError && <div className={styles.errorText}>{saveError}</div>}
             </header>
 
             {/* Add input */}
