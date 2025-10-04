@@ -1,9 +1,10 @@
 // src/pages/CategoryPage.jsx
 import React, { useEffect, useMemo, useState } from "react"
-import { useParams, Link, useBlocker } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import useUnsavedChangesPrompt from "../hooks/useUnsavedChangesPrompt"
 
 function CategoryPage() {
     const { id } = useParams()
@@ -15,25 +16,7 @@ function CategoryPage() {
     const [loading, setLoading] = useState(false)
 
     const hasUnsavedChanges = useMemo(() => newItem.trim().length > 0, [newItem])
-    const blocker = useBlocker(hasUnsavedChanges)
-
-    useEffect(() => {
-        if (blocker.state !== "blocked") return
-
-        const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave this page?")
-
-        if (shouldLeave) {
-            blocker.proceed?.()
-        } else {
-            blocker.reset?.()
-        }
-    }, [blocker.state, blocker])
-
-    useEffect(() => {
-        if (!hasUnsavedChanges && blocker.state === "blocked") {
-            blocker.reset?.()
-        }
-    }, [hasUnsavedChanges, blocker.state, blocker])
+    useUnsavedChangesPrompt(hasUnsavedChanges)
 
     // Load items + category name
     useEffect(() => {

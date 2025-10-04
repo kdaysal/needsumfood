@@ -1,9 +1,10 @@
 // src/pages/LandingPage.jsx
 import React, { useEffect, useMemo, useState } from "react"
-import { Link, useBlocker } from "react-router-dom"
+import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import useUnsavedChangesPrompt from "../hooks/useUnsavedChangesPrompt"
 
 function LandingPage() {
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
@@ -13,25 +14,7 @@ function LandingPage() {
     const [loading, setLoading] = useState(false)
 
     const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
-    const blocker = useBlocker(hasUnsavedChanges)
-
-    useEffect(() => {
-        if (blocker.state !== "blocked") return
-
-        const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave this page?")
-
-        if (shouldLeave) {
-            blocker.proceed?.()
-        } else {
-            blocker.reset?.()
-        }
-    }, [blocker.state, blocker])
-
-    useEffect(() => {
-        if (!hasUnsavedChanges && blocker.state === "blocked") {
-            blocker.reset?.()
-        }
-    }, [hasUnsavedChanges, blocker.state, blocker])
+    useUnsavedChangesPrompt(hasUnsavedChanges)
 
     // Load categories whenever view changes
     useEffect(() => {
