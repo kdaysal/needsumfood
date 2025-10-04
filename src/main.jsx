@@ -1,4 +1,5 @@
 // src/main.jsx
+// Configure the data router so useBlocker-based prompts work under the /needsumfood basename.
 import "./index.css"
 import React from "react"
 import ReactDOM from "react-dom/client"
@@ -19,27 +20,11 @@ const router = createBrowserRouter(
             ],
         },
     ],
-<<<<<<< ours
-<<<<<<< ours
     { basename: "/needsumfood" }
-=======
-    { basename: "/needsumfood" },
->>>>>>> theirs
-=======
-    { basename: "/needsumfood" },
->>>>>>> theirs
 )
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
         <RouterProvider router={router} />
-<<<<<<< ours
-<<<<<<< ours
     </React.StrictMode>
-=======
-    </React.StrictMode>,
->>>>>>> theirs
-=======
-    </React.StrictMode>,
->>>>>>> theirs
 )
