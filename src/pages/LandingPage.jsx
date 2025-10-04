@@ -14,12 +14,21 @@ function LandingPage() {
 
     const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
 <<<<<<< ours
+<<<<<<< ours
+=======
+>>>>>>> theirs
     const { state: blockerState, proceed, reset } = useBlocker(hasUnsavedChanges)
 
     useEffect(() => {
         if (blockerState !== "blocked") return
 
+<<<<<<< ours
         const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave this page?")
+=======
+        const shouldLeave = window.confirm(
+            "You have unsaved changes. Are you sure you want to leave this page?",
+        )
+>>>>>>> theirs
 
         if (shouldLeave) {
             proceed?.()
@@ -33,6 +42,7 @@ function LandingPage() {
             reset?.()
         }
     }, [hasUnsavedChanges, blockerState, reset])
+<<<<<<< ours
 =======
     const blocker = useBlocker(hasUnsavedChanges)
 
@@ -55,6 +65,8 @@ function LandingPage() {
             blocker.reset?.()
         }
     }, [hasUnsavedChanges, blocker])
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 
     // Load categories whenever view changes

@@ -20,7 +20,11 @@ const router = createBrowserRouter(
         },
     ],
 <<<<<<< ours
+<<<<<<< ours
     { basename: "/needsumfood" }
+=======
+    { basename: "/needsumfood" },
+>>>>>>> theirs
 =======
     { basename: "/needsumfood" },
 >>>>>>> theirs
@@ -30,7 +34,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
         <RouterProvider router={router} />
 <<<<<<< ours
+<<<<<<< ours
     </React.StrictMode>
+=======
+    </React.StrictMode>,
+>>>>>>> theirs
 =======
     </React.StrictMode>,
 >>>>>>> theirs

@@ -16,12 +16,21 @@ function CategoryPage() {
 
     const hasUnsavedChanges = useMemo(() => newItem.trim().length > 0, [newItem])
 <<<<<<< ours
+<<<<<<< ours
+=======
+>>>>>>> theirs
     const { state: blockerState, proceed, reset } = useBlocker(hasUnsavedChanges)
 
     useEffect(() => {
         if (blockerState !== "blocked") return
 
+<<<<<<< ours
         const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave this page?")
+=======
+        const shouldLeave = window.confirm(
+            "You have unsaved changes. Are you sure you want to leave this page?",
+        )
+>>>>>>> theirs
 
         if (shouldLeave) {
             proceed?.()
@@ -35,6 +44,7 @@ function CategoryPage() {
             reset?.()
         }
     }, [hasUnsavedChanges, blockerState, reset])
+<<<<<<< ours
 =======
     const blocker = useBlocker(hasUnsavedChanges)
 
@@ -57,6 +67,8 @@ function CategoryPage() {
             blocker.reset?.()
         }
     }, [hasUnsavedChanges, blocker])
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 
     // Load items + category name
