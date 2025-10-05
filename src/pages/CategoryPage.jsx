@@ -7,16 +7,46 @@ import ConfirmModal from "../components/ConfirmModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
 
+const toEditableItem = (item) => ({
+    ...item,
+    notes:
+        typeof item.notes === "string"
+            ? sanitizeOnBlur(item.notes)
+            : "",
+    location:
+        typeof item.location === "string"
+            ? sanitizeOnBlur(item.location)
+            : "",
+})
+
 function CategoryPage() {
     const { id } = useParams()
     const [categoryName, setCategoryName] = useState("")
     const [items, setItems] = useState([])
+    const [baselineItems, setBaselineItems] = useState([])
     const [newItem, setNewItem] = useState("")
     const [modalItemId, setModalItemId] = useState(null)
     const [itemView, setItemView] = useState("visible")
     const [loading, setLoading] = useState(false)
 
-    const hasUnsavedChanges = useMemo(() => newItem.trim().length > 0, [newItem])
+    const hasUnsavedChanges = useMemo(() => {
+        if (newItem.trim().length > 0) return true
+
+        if (items.length !== baselineItems.length) return true
+
+        const baselineMap = new Map(baselineItems.map((item) => [item._id, item]))
+
+        return items.some((item) => {
+            const baseline = baselineMap.get(item._id)
+            if (!baseline) return true
+
+            return ["notes", "location"].some((field) => {
+                const currentValue = item[field] ?? ""
+                const baselineValue = baseline[field] ?? ""
+                return currentValue !== baselineValue
+            })
+        })
+    }, [items, baselineItems, newItem])
     useConfirmingBlocker(hasUnsavedChanges)
 
     // Load items + category name
@@ -25,8 +55,10 @@ function CategoryPage() {
             setLoading(true)
             try {
                 const { category, items } = await fetchItems(id)
+                const normalizedItems = items.map((item) => toEditableItem(item))
                 setCategoryName(category.name)
-                setItems(items)
+                setItems(normalizedItems)
+                setBaselineItems(normalizedItems.map((item) => ({ ...item })))
             } catch (e) {
                 console.error("Error fetching items:", e)
             } finally {
@@ -40,8 +72,9 @@ function CategoryPage() {
         const name = newItem.trim()
         if (!name) return
         try {
-            const created = await createItem(id, name)
+            const created = toEditableItem(await createItem(id, name))
             setItems((prev) => [...prev, created])
+            setBaselineItems((prev) => [...prev, { ...created }])
             setNewItem("")
         } catch (e) {
             console.error("Error adding item:", e)
@@ -51,8 +84,9 @@ function CategoryPage() {
     // Toggle hide/show
     const handleToggleHidden = async (itemId, hidden) => {
         try {
-            const updated = await updateItem(itemId, { hidden: !hidden })
+            const updated = toEditableItem(await updateItem(itemId, { hidden: !hidden }))
             setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
+            setBaselineItems((prev) => prev.map((it) => (it._id === itemId ? { ...updated } : it)))
         } catch (e) {
             console.error("Error toggling item:", e)
         }
@@ -61,8 +95,9 @@ function CategoryPage() {
     // Toggle need/have
     const handleToggleNeed = async (itemId, need) => {
         try {
-            const updated = await updateItem(itemId, { need: !need })
+            const updated = toEditableItem(await updateItem(itemId, { need: !need }))
             setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
+            setBaselineItems((prev) => prev.map((it) => (it._id === itemId ? { ...updated } : it)))
         } catch (e) {
             console.error("Error toggling need:", e)
         }
@@ -81,21 +116,33 @@ function CategoryPage() {
         const currentItem = items.find((it) => it._id === itemId)
         if (!currentItem) return
 
-        const previousValue = currentItem[field] ?? ""
-        if (previousValue !== trimmedValue) {
-            setItems((prev) =>
-                prev.map((it) => (it._id === itemId ? { ...it, [field]: trimmedValue } : it)),
-            )
+        setItems((prev) =>
+            prev.map((it) => (it._id === itemId ? { ...it, [field]: trimmedValue } : it)),
+        )
+
+        const baselineItem = baselineItems.find((it) => it._id === itemId)
+        const baselineValue = sanitizeOnBlur(baselineItem?.[field] ?? "")
+        if (baselineValue === trimmedValue) {
+            return
         }
 
-        const previousTrimmed = sanitizeOnBlur(previousValue)
-        if (previousTrimmed === trimmedValue) return
-
         try {
-            const updated = await updateItem(itemId, { [field]: trimmedValue })
+            const updated = toEditableItem(await updateItem(itemId, { [field]: trimmedValue }))
             setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
+            setBaselineItems((prev) =>
+                prev.map((it) => (it._id === itemId ? { ...updated } : it)),
+            )
         } catch (e) {
             console.error(`Error updating ${field}:`, e)
+            if (baselineItem) {
+                setItems((prev) =>
+                    prev.map((it) =>
+                        it._id === itemId
+                            ? { ...it, [field]: baselineItem[field] ?? "" }
+                            : it,
+                    ),
+                )
+            }
         }
     }
 
@@ -107,6 +154,7 @@ function CategoryPage() {
         try {
             await deleteItem(itemId)
             setItems((prev) => prev.filter((it) => it._id !== itemId))
+            setBaselineItems((prev) => prev.filter((it) => it._id !== itemId))
         } catch (e) {
             console.error("Error deleting item:", e)
         }
