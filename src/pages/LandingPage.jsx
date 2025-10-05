@@ -1,16 +1,21 @@
 // src/pages/LandingPage.jsx
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
+import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
 
 function LandingPage() {
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
     const [categories, setCategories] = useState([])
     const [newCategory, setNewCategory] = useState("")
-       const [modalCategoryId, setModalCategoryId] = useState(null)
+    const [modalCategoryId, setModalCategoryId] = useState(null)
     const [loading, setLoading] = useState(false)
+
+    const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
+    useConfirmingBlocker(hasUnsavedChanges)
 
     // Load categories whenever view changes
     useEffect(() => {
@@ -121,7 +126,8 @@ function LandingPage() {
                     type="text"
                     placeholder="New category"
                     value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
+                    onChange={(e) => setNewCategory(sanitizeOnChange(e.target.value))}
+                    onBlur={() => setNewCategory((prev) => sanitizeOnBlur(prev))}
                     onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
                 />
                 <button className={styles.addBtn} onClick={handleAddCategory}>

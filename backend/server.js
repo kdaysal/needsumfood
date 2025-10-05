@@ -119,7 +119,7 @@ app.post("/categories", async (req, res) => {
         name
     } = req.body;
     const category = new Category({
-        name
+        name: typeof name === "string" ? name.trim() : name,
     });
     await category.save();
     res.json(category);
@@ -208,7 +208,7 @@ app.post("/items/:categoryId", async (req, res) => {
     try {
         const item = new Item({
             categoryId,
-            name
+            name: typeof name === "string" ? name.trim() : name,
         });
         await item.save();
         res.json(item);
@@ -237,8 +237,8 @@ app.patch("/items/:id", async (req, res) => {
         if (typeof name === "string") update.name = name.trim();
         if (typeof hidden === "boolean") update.hidden = hidden;
         if (typeof need === "boolean") update.need = need;
-        if (typeof notes === "string") update.notes = notes;
-        if (typeof location === "string") update.location = location;
+        if (typeof notes === "string") update.notes = notes.trim();
+        if (typeof location === "string") update.location = location.trim();
 
         const item = await Item.findByIdAndUpdate(id, update, {
             new: true
