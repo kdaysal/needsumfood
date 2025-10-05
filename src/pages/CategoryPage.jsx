@@ -28,24 +28,39 @@ function CategoryPage() {
     const [modalItemId, setModalItemId] = useState(null)
     const [itemView, setItemView] = useState("visible")
     const [loading, setLoading] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
 
-    const hasUnsavedChanges = useMemo(() => {
-        if (newItem.trim().length > 0) return true
-
-        if (items.length !== baselineItems.length) return true
-
+    const { hasUnsavedChanges, dirtyItems } = useMemo(() => {
         const baselineMap = new Map(baselineItems.map((item) => [item._id, item]))
+        const pendingUpdates = []
 
-        return items.some((item) => {
+        for (const item of items) {
             const baseline = baselineMap.get(item._id)
-            if (!baseline) return true
+            if (!baseline) continue
 
-            return ["notes", "location"].some((field) => {
-                const currentValue = item[field] ?? ""
-                const baselineValue = baseline[field] ?? ""
-                return currentValue !== baselineValue
-            })
-        })
+            const changes = {}
+
+            for (const field of ["notes", "location"]) {
+                const currentValue = sanitizeOnBlur(item[field] ?? "")
+                const baselineValue = sanitizeOnBlur(baseline[field] ?? "")
+
+                if (currentValue !== baselineValue) {
+                    changes[field] = currentValue
+                }
+            }
+
+            if (Object.keys(changes).length > 0) {
+                pendingUpdates.push({ itemId: item._id, changes })
+            }
+        }
+
+        const trimmedNewItem = sanitizeOnBlur(newItem)
+
+        return {
+            hasUnsavedChanges:
+                pendingUpdates.length > 0 || trimmedNewItem.length > 0 || items.length !== baselineItems.length,
+            dirtyItems: pendingUpdates,
+        }
     }, [items, baselineItems, newItem])
     useConfirmingBlocker(hasUnsavedChanges)
 
@@ -111,7 +126,7 @@ function CategoryPage() {
         )
     }
 
-    const handleFieldBlur = async (itemId, field, value) => {
+    const handleFieldBlur = (itemId, field, value) => {
         const trimmedValue = sanitizeOnBlur(value)
         const currentItem = items.find((it) => it._id === itemId)
         if (!currentItem) return
@@ -119,31 +134,6 @@ function CategoryPage() {
         setItems((prev) =>
             prev.map((it) => (it._id === itemId ? { ...it, [field]: trimmedValue } : it)),
         )
-
-        const baselineItem = baselineItems.find((it) => it._id === itemId)
-        const baselineValue = sanitizeOnBlur(baselineItem?.[field] ?? "")
-        if (baselineValue === trimmedValue) {
-            return
-        }
-
-        try {
-            const updated = toEditableItem(await updateItem(itemId, { [field]: trimmedValue }))
-            setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
-            setBaselineItems((prev) =>
-                prev.map((it) => (it._id === itemId ? { ...updated } : it)),
-            )
-        } catch (e) {
-            console.error(`Error updating ${field}:`, e)
-            if (baselineItem) {
-                setItems((prev) =>
-                    prev.map((it) =>
-                        it._id === itemId
-                            ? { ...it, [field]: baselineItem[field] ?? "" }
-                            : it,
-                    ),
-                )
-            }
-        }
     }
 
     // Delete with confirm
@@ -161,6 +151,35 @@ function CategoryPage() {
     }
     const cancelDelete = () => setModalItemId(null)
 
+    const handleSaveChanges = async () => {
+        if (isSaving || dirtyItems.length === 0) return
+
+        setIsSaving(true)
+        const successfullyUpdated = []
+
+        for (const { itemId, changes } of dirtyItems) {
+            try {
+                const updated = toEditableItem(await updateItem(itemId, changes))
+                successfullyUpdated.push(updated)
+            } catch (e) {
+                console.error("Error saving item changes:", e)
+            }
+        }
+
+        if (successfullyUpdated.length > 0) {
+            const updatedMap = new Map(successfullyUpdated.map((item) => [item._id, item]))
+            setItems((prev) => prev.map((it) => updatedMap.get(it._id) ?? it))
+            setBaselineItems((prev) =>
+                prev.map((it) => {
+                    const updated = updatedMap.get(it._id)
+                    return updated ? { ...updated } : it
+                }),
+            )
+        }
+
+        setIsSaving(false)
+    }
+
     const filteredItems = items.filter((item) => {
         if (itemView === "all") return true
         if (itemView === "hidden") return item.hidden
@@ -170,11 +189,19 @@ function CategoryPage() {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
+                <div className={styles.headerTop}>
+                    <Link to="/" className={styles.backLink}>
+                        ← Back
+                    </Link>
+                    <button
+                        className={styles.saveButton}
+                        onClick={handleSaveChanges}
+                        disabled={dirtyItems.length === 0 || isSaving}
+                    >
+                        {isSaving ? "Saving…" : "Save"}
+                    </button>
+                </div>
                 <h1 className={styles.title}>{categoryName || "Category Items"}</h1>
-                <Link to="/" className={styles.backLink}>
-                    ← Back
-                </Link>
-
                 <div className={styles.segment}>
                     <button
                         className={`${styles.segmentBtn} ${itemView === "visible" ? styles.active : ""}`}
