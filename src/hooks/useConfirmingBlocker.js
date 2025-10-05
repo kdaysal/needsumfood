@@ -26,5 +26,21 @@ export default function useConfirmingBlocker(
         }
     }, [when, state, reset])
 
+    useEffect(() => {
+        if (!when) return undefined
+
+        const handleBeforeUnload = (event) => {
+            event.preventDefault()
+            event.returnValue = message
+            return message
+        }
+
+        window.addEventListener("beforeunload", handleBeforeUnload)
+
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload)
+        }
+    }, [when, message])
+
     return blocker
 }

@@ -19,10 +19,35 @@
     text-align: center;
 }
 
+.headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
 .title {
     font-size: 1.8rem;
     font-weight: bold;
     color: #111827;
+}
+
+.backLink {
+    color: #2563eb;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.backLink:hover {
+    text-decoration: underline;
 }
 
 .subtitle {
@@ -93,6 +118,36 @@
 
 .addBtn:hover {
     background: #1e40af;
+}
+
+.saveBtn {
+    padding: 0.45rem 0.9rem;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.saveBtn:hover {
+    background: #15803d;
+}
+
+.saveBtn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.statusMessage {
+    font-size: 0.85rem;
+    color: #059669;
+    margin-top: 0.25rem;
+}
+
+.statusMessageError {
+    color: #dc2626;
 }
 
 /* List */
