@@ -183,6 +183,8 @@ function CategoryPage() {
     const filteredItems = items.filter((item) => {
         if (itemView === "all") return true
         if (itemView === "hidden") return item.hidden
+        if (itemView === "need") return !item.need
+        if (itemView === "have") return Boolean(item.need)
         return !item.hidden
     })
 
@@ -220,6 +222,18 @@ function CategoryPage() {
                         onClick={() => setItemView("all")}
                     >
                         All
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${itemView === "need" ? styles.active : ""}`}
+                        onClick={() => setItemView("need")}
+                    >
+                        Need
+                    </button>
+                    <button
+                        className={`${styles.segmentBtn} ${itemView === "have" ? styles.active : ""}`}
+                        onClick={() => setItemView("have")}
+                    >
+                        Have
                     </button>
                 </div>
             </header>
@@ -294,7 +308,7 @@ function CategoryPage() {
                                 title={item.hidden ? "Show" : "Hide"}
                                 onClick={() => handleToggleHidden(item._id, item.hidden)}
                             >
-                                {item.hidden ? "👀" : "🙈"}
+                                {item.hidden ? "" : "🙈"}
                             </button>
                             <button
                                 className={styles.iconBtn}
