@@ -1,5 +1,6 @@
-/* Container */
-.container {
+/* src/pages/LandingPage.module.css */
+ /* Container */
+ .container {
     max-width: 600px;
     margin: 0 auto;
     padding: 1rem;

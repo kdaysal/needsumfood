@@ -1,3 +1,4 @@
+// src/utils/sanitizeInput.js
 export const sanitizeOnChange = (value) => {
     if (typeof value !== "string") return value
 

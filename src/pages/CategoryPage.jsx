@@ -9,6 +9,7 @@ import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
 
 const toEditableItem = (item) => ({
     ...item,
+    need: item.need !== false,
     notes:
         typeof item.notes === "string"
             ? sanitizeOnBlur(item.notes)
@@ -27,6 +28,7 @@ function CategoryPage() {
     const [newItem, setNewItem] = useState("")
     const [modalItemId, setModalItemId] = useState(null)
     const [itemView, setItemView] = useState("visible")
+    const [statusFilter, setStatusFilter] = useState("all")
     const [loading, setLoading] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
 
@@ -85,7 +87,7 @@ function CategoryPage() {
     // Add new item
     const handleAddItem = async () => {
         const name = newItem.trim()
-               if (!name) return
+        if (!name) return
         try {
             const created = toEditableItem(await createItem(id, name))
             setItems((prev) => [...prev, created])
@@ -181,11 +183,15 @@ function CategoryPage() {
     }
 
     const filteredItems = items.filter((item) => {
-        if (itemView === "all") return true
-        if (itemView === "hidden") return item.hidden
-        if (itemView === "need") return !item.need
-        if (itemView === "have") return Boolean(item.need)
-        return !item.hidden
+        const matchesVisibility =
+            itemView === "all" ? true : itemView === "hidden" ? item.hidden : !item.hidden
+
+        if (!matchesVisibility) return false
+
+        if (statusFilter === "need") return item.need !== false
+        if (statusFilter === "have") return item.need === false
+
+        return true
     })
 
     return (
@@ -223,15 +229,21 @@ function CategoryPage() {
                     >
                         All
                     </button>
+                </div>
+                <div className={styles.segment}>
                     <button
-                        className={`${styles.segmentBtn} ${itemView === "need" ? styles.active : ""}`}
-                        onClick={() => setItemView("need")}
+                        className={`${styles.segmentBtn} ${statusFilter === "need" ? styles.active : ""}`}
+                        onClick={() =>
+                            setStatusFilter((prev) => (prev === "need" ? "all" : "need"))
+                        }
                     >
                         Need
                     </button>
                     <button
-                        className={`${styles.segmentBtn} ${itemView === "have" ? styles.active : ""}`}
-                        onClick={() => setItemView("have")}
+                        className={`${styles.segmentBtn} ${statusFilter === "have" ? styles.active : ""}`}
+                        onClick={() =>
+                            setStatusFilter((prev) => (prev === "have" ? "all" : "have"))
+                        }
                     >
                         Have
                     </button>
@@ -261,6 +273,7 @@ function CategoryPage() {
                         id,
                         categoryName,
                         view: itemView,
+                        statusFilter,
                         totalItems: items.length,
                         filteredCount: filteredItems.length,
                     },
