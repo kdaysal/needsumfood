@@ -140,46 +140,52 @@ function LandingPage() {
                 {loading && <div className={styles.loading}>Loading…</div>}
                 {!loading && categories.length === 0 && <div className={styles.empty}>No categories in this view.</div>}
 
-                {categories.map((cat) => (
-                    <Link key={cat._id} to={`/category/${cat._id}`} className={styles.card}>
-                        <span className={styles.cardTitle}>{cat.name}</span>
-                        <div className={styles.actions}>
-                            {cat.hidden ? (
-                                <button
-                                    className={styles.iconBtn}
-                                    title="Show"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        handleShow(cat._id)
-                                    }}
-                                >
-                                    👀
-                                </button>
-                            ) : (
-                                <button
-                                    className={styles.iconBtn}
-                                    title="Hide"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        handleHide(cat._id)
-                                    }}
-                                >
-                                    🙈
-                                </button>
-                            )}
-                            <button
-                                className={`${styles.iconBtn} ${styles.danger}`}
-                                title="Delete"
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    handleDelete(cat._id)
-                                }}
+                {categories.map((cat) => {
+                    const titleId = `category-${cat._id}-title`
+
+                    return (
+                        <div key={cat._id} className={styles.card}>
+                            <Link
+                                to={`/category/${cat._id}`}
+                                aria-labelledby={titleId}
+                                className={styles.cardBody}
                             >
-                                🗑️
-                            </button>
+                                <span id={titleId} className={styles.cardTitle}>
+                                    {cat.name}
+                                </span>
+                            </Link>
+                            <div className={styles.actions}>
+                                {cat.hidden ? (
+                                    <button
+                                        type="button"
+                                        className={styles.iconBtn}
+                                        title="Show"
+                                        onClick={() => handleShow(cat._id)}
+                                    >
+                                        👀
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className={styles.iconBtn}
+                                        title="Hide"
+                                        onClick={() => handleHide(cat._id)}
+                                    >
+                                        🙈
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className={`${styles.iconBtn} ${styles.danger}`}
+                                    title="Delete"
+                                    onClick={() => handleDelete(cat._id)}
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
-                    </Link>
-                ))}
+                    )
+                })}
             </main>
 
             <ConfirmModal
