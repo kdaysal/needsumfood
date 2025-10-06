@@ -85,7 +85,7 @@ function CategoryPage() {
     // Add new item
     const handleAddItem = async () => {
         const name = newItem.trim()
-        if (!name) return
+               if (!name) return
         try {
             const created = toEditableItem(await createItem(id, name))
             setItems((prev) => [...prev, created])
@@ -308,7 +308,7 @@ function CategoryPage() {
                                 title={item.hidden ? "Show" : "Hide"}
                                 onClick={() => handleToggleHidden(item._id, item.hidden)}
                             >
-                                {item.hidden ? "" : "🙈"}
+                                {item.hidden ? "👀" : "🙈"}
                             </button>
                             <button
                                 className={styles.iconBtn}
