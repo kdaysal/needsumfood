@@ -219,6 +219,11 @@ function CategoryPage() {
         setIsSaving(false)
     }
 
+    const handleShowAll = () => {
+        setItemView("all")
+        setStatusFilter("all")
+    }
+
     const filteredItems = items.filter((item) => {
         const matchesVisibility =
             itemView === "all" ? true : itemView === "hidden" ? item.hidden : !item.hidden
@@ -230,6 +235,8 @@ function CategoryPage() {
 
         return true
     })
+
+    const isAllFilterActive = itemView === "all" && statusFilter === "all"
 
     return (
         <div className={styles.container}>
@@ -261,8 +268,8 @@ function CategoryPage() {
                         Hidden
                     </button>
                     <button
-                        className={`${styles.segmentBtn} ${itemView === "all" ? styles.active : ""}`}
-                        onClick={() => setItemView("all")}
+                        className={`${styles.segmentBtn} ${isAllFilterActive ? styles.active : ""}`}
+                        onClick={handleShowAll}
                     >
                         All
                     </button>
@@ -339,16 +346,6 @@ function CategoryPage() {
                                 <span className={styles.cardTitle}>{item.name}</span>
                                 <div className={styles.cardDetails}>
                                     <div className={styles.detailRow}>
-                                        <span className={styles.detailLabel}>Notes:</span>
-                                        <span
-                                            className={`${styles.detailValue} ${
-                                                notes.isEmpty ? styles.detailPlaceholder : ""
-                                            }`}
-                                        >
-                                            {notes.text}
-                                        </span>
-                                    </div>
-                                    <div className={styles.detailRow}>
                                         <span className={styles.detailLabel}>Location:</span>
                                         <span
                                             className={`${styles.detailValue} ${
@@ -356,6 +353,16 @@ function CategoryPage() {
                                             }`}
                                         >
                                             {location.text}
+                                        </span>
+                                    </div>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.detailLabel}>Notes:</span>
+                                        <span
+                                            className={`${styles.detailValue} ${
+                                                notes.isEmpty ? styles.detailPlaceholder : ""
+                                            }`}
+                                        >
+                                            {notes.text}
                                         </span>
                                     </div>
                                 </div>
