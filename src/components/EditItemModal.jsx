@@ -1,3 +1,4 @@
+// src/components/EditItemModal.jsx
 import React from "react"
 
 const EditItemModal = ({
@@ -17,6 +18,18 @@ const EditItemModal = ({
             <div className={`${styles.modal} ${styles.editModal}`} role="dialog" aria-modal="true">
                 <h2 className={styles.modalTitle}>Edit {item.name}</h2>
                 <div className={styles.modalContent}>
+                    <label className={styles.modalLabel} htmlFor="edit-name">
+                        Name
+                    </label>
+                    <input
+                        id="edit-name"
+                        className={`${styles.input} ${styles.modalInput}`}
+                        type="text"
+                        placeholder="Item name"
+                        value={item.name ?? ""}
+                        onChange={(e) => onFieldChange("name", e.target.value)}
+                        onBlur={(e) => onFieldBlur("name", e.target.value)}
+                    />
                     <label className={styles.modalLabel} htmlFor="edit-notes">
                         Notes
                     </label>

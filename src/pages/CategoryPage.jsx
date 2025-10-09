@@ -10,6 +10,10 @@ import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
 
 const toEditableItem = (item) => ({
     ...item,
+    name:
+        typeof item.name === "string"
+            ? sanitizeOnBlur(item.name)
+            : "",
     need: item.need !== false,
     notes:
         typeof item.notes === "string"
@@ -126,7 +130,7 @@ function CategoryPage() {
     const openEditModal = (item) => {
         setEditingItem({
             _id: item._id,
-            name: item.name,
+            name: sanitizeOnBlur(item.name ?? ""),
             notes: sanitizeOnBlur(item.notes ?? ""),
             location: sanitizeOnBlur(item.location ?? ""),
         })
@@ -148,16 +152,33 @@ function CategoryPage() {
         if (!editingItem || isEditingSaving) return
 
         setIsEditingSaving(true)
+        const sanitizedName = sanitizeOnBlur(editingItem.name ?? "")
         const payload = {
+            name: sanitizedName,
             notes: sanitizeOnBlur(editingItem.notes ?? ""),
             location: sanitizeOnBlur(editingItem.location ?? ""),
         }
 
+        if (!payload.name) {
+            setIsEditingSaving(false)
+            return
+        }
+
         try {
             const updated = toEditableItem(await updateItem(editingItem._id, payload))
-            setItems((prev) => prev.map((it) => (it._id === updated._id ? updated : it)))
+            setItems((prev) =>
+                prev.map((it) =>
+                    it._id === updated._id
+                        ? { ...updated, name: sanitizedName }
+                        : it,
+                ),
+            )
             setBaselineItems((prev) =>
-                prev.map((it) => (it._id === updated._id ? { ...updated } : it)),
+                prev.map((it) =>
+                    it._id === updated._id
+                        ? { ...updated, name: sanitizedName }
+                        : it,
+                ),
             )
             setEditingItem(null)
         } catch (e) {

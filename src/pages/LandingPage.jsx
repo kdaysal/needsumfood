@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import EditCategoryModal from "../components/EditCategoryModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
 
@@ -13,6 +14,8 @@ function LandingPage() {
     const [newCategory, setNewCategory] = useState("")
     const [modalCategoryId, setModalCategoryId] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [editingCategory, setEditingCategory] = useState(null)
+    const [isEditingSaving, setIsEditingSaving] = useState(false)
 
     const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
     useConfirmingBlocker(hasUnsavedChanges)
@@ -88,6 +91,54 @@ function LandingPage() {
     }
     const cancelDelete = () => setModalCategoryId(null)
 
+    const openEditCategory = (category) => {
+        setEditingCategory({
+            _id: category._id,
+            name: sanitizeOnBlur(category.name ?? ""),
+        })
+    }
+
+    const handleEditCategoryChange = (value) => {
+        const sanitized = sanitizeOnChange(value)
+        setEditingCategory((prev) => (prev ? { ...prev, name: sanitized } : prev))
+    }
+
+    const handleEditCategoryBlur = (value) => {
+        const trimmed = sanitizeOnBlur(value)
+        setEditingCategory((prev) => (prev ? { ...prev, name: trimmed } : prev))
+    }
+
+    const handleCancelEditCategory = () => setEditingCategory(null)
+
+    const handleSaveEditCategory = async () => {
+        if (!editingCategory || isEditingSaving) return
+
+        const trimmedName = sanitizeOnBlur(editingCategory.name ?? "")
+        if (!trimmedName) return
+
+        const duplicate = categories.some(
+            (cat) => cat._id !== editingCategory._id && cat.name.toLowerCase() === trimmedName.toLowerCase(),
+        )
+        if (duplicate) return
+
+        setIsEditingSaving(true)
+        try {
+            const updated = await updateCategory(editingCategory._id, { name: trimmedName })
+            setCategories((prev) =>
+                prev.map((cat) =>
+                    cat._id === updated._id
+                        ? { ...cat, ...updated, name: trimmedName }
+                        : cat,
+                ),
+            )
+            setEditingCategory(null)
+        } catch (e) {
+            console.error("Error updating category:", e)
+        } finally {
+            setIsEditingSaving(false)
+        }
+    }
+
     return (
         <div className={styles.container}>
             <header className={styles.header}>
@@ -155,6 +206,14 @@ function LandingPage() {
                                 </span>
                             </Link>
                             <div className={styles.actions}>
+                                <button
+                                    type="button"
+                                    className={styles.iconBtn}
+                                    title="Edit"
+                                    onClick={() => openEditCategory(cat)}
+                                >
+                                    ✏️
+                                </button>
                                 {cat.hidden ? (
                                     <button
                                         type="button"
@@ -194,6 +253,16 @@ function LandingPage() {
                 message="Are you sure you want to permanently delete this category?"
                 onConfirm={confirmDelete}
                 onCancel={cancelDelete}
+            />
+            <EditCategoryModal
+                open={Boolean(editingCategory)}
+                styles={styles}
+                category={editingCategory}
+                onNameChange={handleEditCategoryChange}
+                onNameBlur={handleEditCategoryBlur}
+                onCancel={handleCancelEditCategory}
+                onSave={handleSaveEditCategory}
+                saving={isEditingSaving}
             />
         </div>
     )
