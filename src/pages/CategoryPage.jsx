@@ -4,6 +4,7 @@ import { useParams, Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
+import EditItemModal from "../components/EditItemModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
 
@@ -31,6 +32,8 @@ function CategoryPage() {
     const [statusFilter, setStatusFilter] = useState("all")
     const [loading, setLoading] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [editingItem, setEditingItem] = useState(null)
+    const [isEditingSaving, setIsEditingSaving] = useState(false)
 
     const { hasUnsavedChanges, dirtyItems } = useMemo(() => {
         const baselineMap = new Map(baselineItems.map((item) => [item._id, item]))
@@ -120,22 +123,56 @@ function CategoryPage() {
         }
     }
 
-    // Update notes/location inline
-    const handleFieldChange = (itemId, field, value) => {
-        const sanitized = sanitizeOnChange(value)
-        setItems((prev) =>
-            prev.map((it) => (it._id === itemId ? { ...it, [field]: sanitized } : it)),
-        )
+    const openEditModal = (item) => {
+        setEditingItem({
+            _id: item._id,
+            name: item.name,
+            notes: sanitizeOnBlur(item.notes ?? ""),
+            location: sanitizeOnBlur(item.location ?? ""),
+        })
     }
 
-    const handleFieldBlur = (itemId, field, value) => {
-        const trimmedValue = sanitizeOnBlur(value)
-        const currentItem = items.find((it) => it._id === itemId)
-        if (!currentItem) return
+    const handleEditFieldChange = (field, value) => {
+        const sanitized = sanitizeOnChange(value)
+        setEditingItem((prev) => (prev ? { ...prev, [field]: sanitized } : prev))
+    }
 
-        setItems((prev) =>
-            prev.map((it) => (it._id === itemId ? { ...it, [field]: trimmedValue } : it)),
-        )
+    const handleEditFieldBlur = (field, value) => {
+        const trimmedValue = sanitizeOnBlur(value)
+        setEditingItem((prev) => (prev ? { ...prev, [field]: trimmedValue } : prev))
+    }
+
+    const handleCancelEdit = () => setEditingItem(null)
+
+    const handleSaveEdit = async () => {
+        if (!editingItem || isEditingSaving) return
+
+        setIsEditingSaving(true)
+        const payload = {
+            notes: sanitizeOnBlur(editingItem.notes ?? ""),
+            location: sanitizeOnBlur(editingItem.location ?? ""),
+        }
+
+        try {
+            const updated = toEditableItem(await updateItem(editingItem._id, payload))
+            setItems((prev) => prev.map((it) => (it._id === updated._id ? updated : it)))
+            setBaselineItems((prev) =>
+                prev.map((it) => (it._id === updated._id ? { ...updated } : it)),
+            )
+            setEditingItem(null)
+        } catch (e) {
+            console.error("Error updating item:", e)
+        } finally {
+            setIsEditingSaving(false)
+        }
+    }
+
+    const getDetailValue = (value) => {
+        const sanitized = sanitizeOnBlur(value ?? "")
+        return {
+            text: sanitized.length > 0 ? sanitized : "—",
+            isEmpty: sanitized.length === 0,
+        }
     }
 
     // Delete with confirm
@@ -292,54 +329,71 @@ function CategoryPage() {
                     <div className={styles.empty}>No items in this view.</div>
                 )}
 
-                {filteredItems.map((item) => (
-                    <div key={item._id} className={styles.card}>
-                        <span className={styles.cardTitle}>{item.name}</span>
+                {filteredItems.map((item) => {
+                    const notes = getDetailValue(item.notes)
+                    const location = getDetailValue(item.location)
 
-                        <div className={styles.cardFields}>
-                            <input
-                                className={styles.input}
-                                type="text"
-                                placeholder="Notes"
-                                value={item.notes || ""}
-                                onChange={(e) => handleFieldChange(item._id, "notes", e.target.value)}
-                                onBlur={(e) => handleFieldBlur(item._id, "notes", e.target.value)}
-                            />
-                            <input
-                                className={styles.input}
-                                type="text"
-                                placeholder="Location"
-                                value={item.location || ""}
-                                onChange={(e) => handleFieldChange(item._id, "location", e.target.value)}
-                                onBlur={(e) => handleFieldBlur(item._id, "location", e.target.value)}
-                            />
-                        </div>
+                    return (
+                        <div key={item._id} className={styles.card}>
+                            <div className={styles.cardInfo}>
+                                <span className={styles.cardTitle}>{item.name}</span>
+                                <div className={styles.cardDetails}>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.detailLabel}>Notes:</span>
+                                        <span
+                                            className={`${styles.detailValue} ${
+                                                notes.isEmpty ? styles.detailPlaceholder : ""
+                                            }`}
+                                        >
+                                            {notes.text}
+                                        </span>
+                                    </div>
+                                    <div className={styles.detailRow}>
+                                        <span className={styles.detailLabel}>Location:</span>
+                                        <span
+                                            className={`${styles.detailValue} ${
+                                                location.isEmpty ? styles.detailPlaceholder : ""
+                                            }`}
+                                        >
+                                            {location.text}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div className={styles.actions}>
-                            <button
-                                className={styles.iconBtn}
-                                title={item.hidden ? "Show" : "Hide"}
-                                onClick={() => handleToggleHidden(item._id, item.hidden)}
-                            >
-                                {item.hidden ? "👀" : "🙈"}
-                            </button>
-                            <button
-                                className={styles.iconBtn}
-                                title={item.need ? "Mark as Have" : "Mark as Need"}
-                                onClick={() => handleToggleNeed(item._id, item.need)}
-                            >
-                                {item.need ? "🛒" : "✅"}
-                            </button>
-                            <button
-                                className={`${styles.iconBtn} ${styles.danger}`}
-                                title="Delete"
-                                onClick={() => handleDelete(item._id)}
-                            >
-                                🗑️
-                            </button>
+                            <div className={styles.actions}>
+                                <button
+                                    className={styles.iconBtn}
+                                    title="Edit details"
+                                    onClick={() => openEditModal(item)}
+                                >
+                                    ✏️
+                                </button>
+                                <button
+                                    className={styles.iconBtn}
+                                    title={item.hidden ? "Show" : "Hide"}
+                                    onClick={() => handleToggleHidden(item._id, item.hidden)}
+                                >
+                                    {item.hidden ? "👀" : "🙈"}
+                                </button>
+                                <button
+                                    className={styles.iconBtn}
+                                    title={item.need ? "Mark as Have" : "Mark as Need"}
+                                    onClick={() => handleToggleNeed(item._id, item.need)}
+                                >
+                                    {item.need ? "🛒" : "✅"}
+                                </button>
+                                <button
+                                    className={`${styles.iconBtn} ${styles.danger}`}
+                                    title="Delete"
+                                    onClick={() => handleDelete(item._id)}
+                                >
+                                    🗑️
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </main>
 
             <ConfirmModal
@@ -348,6 +402,16 @@ function CategoryPage() {
                 message="Are you sure you want to permanently delete this item?"
                 onConfirm={confirmDelete}
                 onCancel={cancelDelete}
+            />
+            <EditItemModal
+                open={Boolean(editingItem)}
+                styles={styles}
+                item={editingItem}
+                onFieldChange={handleEditFieldChange}
+                onFieldBlur={handleEditFieldBlur}
+                onCancel={handleCancelEdit}
+                onSave={handleSaveEdit}
+                saving={isEditingSaving}
             />
         </div>
     )
