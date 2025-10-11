@@ -7,6 +7,8 @@ import ConfirmModal from "../components/ConfirmModal"
 import EditItemModal from "../components/EditItemModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
+import SortMenu from "../components/SortMenu"
+import { mergeOrder, reorderWithinList } from "../utils/orderUtils"
 
 const toEditableItem = (item) => ({
     ...item,
@@ -38,6 +40,8 @@ function CategoryPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [isEditingSaving, setIsEditingSaving] = useState(false)
+    const [sortMode, setSortMode] = useState("alphabetical")
+    const [itemCustomOrder, setItemCustomOrder] = useState([])
 
     const { hasUnsavedChanges, dirtyItems } = useMemo(() => {
         const baselineMap = new Map(baselineItems.map((item) => [item._id, item]))
@@ -83,6 +87,7 @@ function CategoryPage() {
                 setCategoryName(category.name)
                 setItems(normalizedItems)
                 setBaselineItems(normalizedItems.map((item) => ({ ...item })))
+                setItemCustomOrder(normalizedItems.map((item) => item._id))
             } catch (e) {
                 console.error("Error fetching items:", e)
             } finally {
@@ -97,7 +102,18 @@ function CategoryPage() {
         if (!name) return
         try {
             const created = toEditableItem(await createItem(id, name))
-            setItems((prev) => [...prev, created])
+            setItems((prev) => {
+                const updated = [...prev, created]
+                setItemCustomOrder((prevOrder) => {
+                    const allIds = updated.map((item) => item._id)
+                    const normalized = mergeOrder(prevOrder, allIds).filter((itemId) => itemId !== created._id)
+                    if (sortMode === "custom") {
+                        return [created._id, ...normalized]
+                    }
+                    return [...normalized, created._id]
+                })
+                return updated
+            })
             setBaselineItems((prev) => [...prev, { ...created }])
             setNewItem("")
         } catch (e) {
@@ -120,7 +136,7 @@ function CategoryPage() {
     const handleToggleNeed = async (itemId, need) => {
         try {
             const updated = toEditableItem(await updateItem(itemId, { need: !need }))
-            setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
+            setItems((prev) => prev.map((it) => (it._Id === itemId ? updated : it)))
             setBaselineItems((prev) => prev.map((it) => (it._id === itemId ? { ...updated } : it)))
         } catch (e) {
             console.error("Error toggling need:", e)
@@ -205,6 +221,7 @@ function CategoryPage() {
             await deleteItem(itemId)
             setItems((prev) => prev.filter((it) => it._id !== itemId))
             setBaselineItems((prev) => prev.filter((it) => it._id !== itemId))
+            setItemCustomOrder((prev) => prev.filter((orderId) => orderId !== itemId))
         } catch (e) {
             console.error("Error deleting item:", e)
         }
@@ -257,15 +274,63 @@ function CategoryPage() {
         return true
     })
 
+    const sortedItems = useMemo(() => {
+        if (sortMode === "alphabetical") {
+            return [...items].sort((a, b) =>
+                (a.name ?? "").localeCompare(b.name ?? "", undefined, {
+                    sensitivity: "base",
+                }),
+            )
+        }
+
+        const itemMap = new Map(items.map((item) => [item._id, item]))
+        const order = itemCustomOrder.length > 0 ? itemCustomOrder : items.map((item) => item._id)
+        return order
+            .map((itemId) => itemMap.get(itemId))
+            .filter((item) => Boolean(item))
+    }, [itemCustomOrder, items, sortMode])
+
+    const filteredSortedItems = useMemo(() => {
+        const filteredSet = new Set(filteredItems.map((item) => item._id))
+        return sortedItems.filter((item) => filteredSet.has(item._id))
+    }, [filteredItems, sortedItems])
+
     const isAllFilterActive = itemView === "all" && statusFilter === "all"
+
+    const handleSortModeChange = (mode) => {
+        setSortMode(mode)
+        if (mode === "custom") {
+            setItemCustomOrder((prev) => mergeOrder(prev, items.map((item) => item._id)))
+        }
+    }
+
+    const moveItem = (itemId, direction) => {
+        if (sortMode !== "custom") return
+
+        const displayedIds = filteredSortedItems.map((item) => item._id)
+        setItemCustomOrder((prev) =>
+            reorderWithinList(
+                prev,
+                items.map((item) => item._id),
+                displayedIds,
+                itemId,
+                direction,
+            ),
+        )
+    }
+
+    const activeSortLabel = sortMode === "alphabetical" ? "Alphabetical" : "Custom"
 
     return (
         <div className={styles.container}>
             <header className={styles.header}>
                 <div className={styles.headerTop}>
-                    <Link to="/" className={styles.backLink}>
-                        ← Back
-                    </Link>
+                    <div className={styles.headerLeft}>
+                        <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
+                        <Link to="/" className={styles.backLink}>
+                            ← Back
+                        </Link>
+                    </div>
                     <button
                         className={styles.saveButton}
                         onClick={handleSaveChanges}
@@ -313,6 +378,7 @@ function CategoryPage() {
                         Have
                     </button>
                 </div>
+                <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
             </header>
 
             {/* Add item */}
@@ -337,16 +403,38 @@ function CategoryPage() {
                 {!loading && items.length === 0 && (
                     <div className={styles.empty}>No items yet — add some to get started!</div>
                 )}
-                {!loading && items.length > 0 && filteredItems.length === 0 && (
+                {!loading && items.length > 0 && filteredSortedItems.length === 0 && (
                     <div className={styles.empty}>No items in this view.</div>
                 )}
 
-                {filteredItems.map((item) => {
+                {filteredSortedItems.map((item, index) => {
                     const notes = getDetailValue(item.notes)
                     const location = getDetailValue(item.location)
 
                     return (
                         <div key={item._id} className={styles.card}>
+                            {sortMode === "custom" && (
+                                <div className={styles.reorderControls}>
+                                    <button
+                                        type="button"
+                                        className={styles.reorderBtn}
+                                        onClick={() => moveItem(item._id, "up")}
+                                        disabled={index === 0}
+                                        aria-label={`Move ${item.name || "item"} up`}
+                                    >
+                                        ↑
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={styles.reorderBtn}
+                                        onClick={() => moveItem(item._id, "down")}
+                                        disabled={index === filteredSortedItems.length - 1}
+                                        aria-label={`Move ${item.name || "item"} down`}
+                                    >
+                                        ↓
+                                    </button>
+                                </div>
+                            )}
                             <div className={styles.cardInfo}>
                                 <span className={styles.cardTitle}>{item.name}</span>
                                 <div className={styles.cardDetails}>

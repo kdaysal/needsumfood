@@ -8,6 +8,7 @@ import App from "./App.jsx"
 import LandingPage from "./pages/LandingPage.jsx"
 import LoginPage from "./pages/LoginPage.jsx"
 import CategoryPage from "./pages/CategoryPage.jsx"
+import { SortProvider } from "./context/SortContext.jsx"
 
 const router = createBrowserRouter(
     [
@@ -20,11 +21,13 @@ const router = createBrowserRouter(
             ],
         },
     ],
-    { basename: "/needsumfood" }
+    { basename: "/needsumfood" },
 )
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
-        <RouterProvider router={router} />
-    </React.StrictMode>
+        <SortProvider>
+            <RouterProvider router={router} />
+        </SortProvider>
+    </React.StrictMode>,
 )

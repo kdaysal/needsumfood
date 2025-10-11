@@ -1,5 +1,5 @@
 // src/pages/LandingPage.jsx
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
@@ -7,6 +7,8 @@ import ConfirmModal from "../components/ConfirmModal"
 import EditCategoryModal from "../components/EditCategoryModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
+import SortMenu from "../components/SortMenu"
+import { mergeOrder, reorderWithinList } from "../utils/orderUtils"
 
 function LandingPage() {
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
@@ -16,9 +18,25 @@ function LandingPage() {
     const [loading, setLoading] = useState(false)
     const [editingCategory, setEditingCategory] = useState(null)
     const [isEditingSaving, setIsEditingSaving] = useState(false)
+    const [sortMode, setSortMode] = useState("alphabetical")
+    const [customOrder, setCustomOrder] = useState([])
 
     const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
     useConfirmingBlocker(hasUnsavedChanges)
+
+    const applyCategoryData = useCallback(
+        (data, { resetOrder = false } = {}) => {
+            setCategories(data)
+            setCustomOrder((prev) => {
+                const ids = data.map((cat) => cat._id)
+                if (resetOrder || prev.length === 0) {
+                    return ids
+                }
+                return mergeOrder(prev, ids)
+            })
+        },
+        [],
+    )
 
     // Load categories whenever view changes
     useEffect(() => {
@@ -26,14 +44,14 @@ function LandingPage() {
             setLoading(true)
             try {
                 const data = await fetchCategories(view)
-                setCategories(data)
+                applyCategoryData(data, { resetOrder: true })
             } catch (e) {
                 console.error("Error fetching categories:", e)
             } finally {
                 setLoading(false)
             }
         })()
-    }, [view])
+    }, [applyCategoryData, view])
 
     // Add new category
     const handleAddCategory = async () => {
@@ -47,7 +65,20 @@ function LandingPage() {
 
         try {
             const created = await createCategory(name)
-            if (view !== "hidden") setCategories((prev) => [...prev, created])
+            if (view !== "hidden") {
+                setCategories((prev) => {
+                    const updated = [...prev, created]
+                    setCustomOrder((prevOrder) => {
+                        const allIds = updated.map((cat) => cat._id)
+                        const normalized = mergeOrder(prevOrder, allIds).filter((id) => id !== created._id)
+                        if (sortMode === "custom") {
+                            return [created._id, ...normalized]
+                        }
+                        return [...normalized, created._id]
+                    })
+                    return updated
+                })
+            }
             setNewCategory("")
         } catch (e) {
             console.error("Error adding category:", e)
@@ -59,7 +90,7 @@ function LandingPage() {
         try {
             await updateCategory(id, { hidden: true })
             const data = await fetchCategories(view)
-            setCategories(data)
+            applyCategoryData(data)
         } catch (err) {
             console.error("Error hiding category:", err)
         }
@@ -70,7 +101,7 @@ function LandingPage() {
         try {
             await updateCategory(id, { hidden: false })
             const data = await fetchCategories(view)
-            setCategories(data)
+            applyCategoryData(data)
         } catch (e) {
             console.error("Error showing category:", e)
         }
@@ -84,7 +115,7 @@ function LandingPage() {
         try {
             await deleteCategory(id)
             const data = await fetchCategories(view)
-            setCategories(data)
+            applyCategoryData(data)
         } catch (e) {
             console.error("Error deleting category:", e)
         }
@@ -139,12 +170,58 @@ function LandingPage() {
         }
     }
 
+    const sortedCategories = useMemo(() => {
+        if (sortMode === "alphabetical") {
+            return [...categories].sort((a, b) =>
+                (a.name ?? "").localeCompare(b.name ?? "", undefined, {
+                    sensitivity: "base",
+                }),
+            )
+        }
+
+        const categoryMap = new Map(categories.map((cat) => [cat._id, cat]))
+        const order = customOrder.length > 0 ? customOrder : categories.map((cat) => cat._id)
+        return order
+            .map((id) => categoryMap.get(id))
+            .filter((cat) => Boolean(cat))
+    }, [categories, customOrder, sortMode])
+
+    const handleSortModeChange = (mode) => {
+        setSortMode(mode)
+        if (mode === "custom") {
+            setCustomOrder((prev) => mergeOrder(prev, categories.map((cat) => cat._id)))
+        }
+    }
+
+    const moveCategory = (categoryId, direction) => {
+        if (sortMode !== "custom") return
+
+        const displayedIds = sortedCategories.map((cat) => cat._id)
+        setCustomOrder((prev) =>
+            reorderWithinList(
+                prev,
+                categories.map((cat) => cat._id),
+                displayedIds,
+                categoryId,
+                direction,
+            ),
+        )
+    }
+
+    const activeSortLabel = sortMode === "alphabetical" ? "Alphabetical" : "Custom"
+
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <div>
-                    <h1 className={styles.title}>NeedSumFood</h1>
-                    <p className={styles.subtitle}>Welcome, User!</p>
+                <div className={styles.headerTop}>
+                    <div className={styles.headerLeft}>
+                        <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
+                    </div>
+                    <div className={styles.headerTitleGroup}>
+                        <h1 className={styles.title}>NeedSumFood</h1>
+                        <p className={styles.subtitle}>Welcome, User!</p>
+                    </div>
+                    <div className={styles.headerRight} aria-hidden="true" />
                 </div>
 
                 {/* View toggle */}
@@ -168,6 +245,7 @@ function LandingPage() {
                         All
                     </button>
                 </div>
+                <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
             </header>
 
             {/* Add input */}
@@ -191,11 +269,33 @@ function LandingPage() {
                 {loading && <div className={styles.loading}>Loading…</div>}
                 {!loading && categories.length === 0 && <div className={styles.empty}>No categories in this view.</div>}
 
-                {categories.map((cat) => {
+                {sortedCategories.map((cat, index) => {
                     const titleId = `category-${cat._id}-title`
 
                     return (
                         <div key={cat._id} className={styles.card}>
+                            {sortMode === "custom" && (
+                                <div className={styles.reorderControls}>
+                                    <button
+                                        type="button"
+                                        className={styles.reorderBtn}
+                                        onClick={() => moveCategory(cat._id, "up")}
+                                        disabled={index === 0}
+                                        aria-label={`Move ${cat.name || "category"} up`}
+                                    >
+                                        ↑
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={styles.reorderBtn}
+                                        onClick={() => moveCategory(cat._id, "down")}
+                                        disabled={index === sortedCategories.length - 1}
+                                        aria-label={`Move ${cat.name || "category"} down`}
+                                    >
+                                        ↓
+                                    </button>
+                                </div>
+                            )}
                             <Link
                                 to={`/category/${cat._id}`}
                                 aria-labelledby={titleId}

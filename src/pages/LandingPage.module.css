@@ -22,13 +22,6 @@
     align-items: stretch;
 }
 
-.headerTop {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-}
-
 .backLink {
     color: #2563eb;
     font-weight: 500;
@@ -48,6 +41,151 @@
 .subtitle {
     font-size: 0.9rem;
     color: #6b7280;
+}
+
+.headerTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.headerTitleGroup {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.headerRight {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+}
+
+.sortLabel {
+    font-size: 0.85rem;
+    color: #4b5563;
+    margin: 0.2rem 0 0;
+}
+
+.sortMenu {
+    position: relative;
+    display: inline-flex;
+}
+
+.hamburgerButton {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.22rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.hamburgerButton:hover,
+.hamburgerButtonActive {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.hamburgerLine {
+    width: 1.35rem;
+    height: 2px;
+    background: #111827;
+    border-radius: 9999px;
+}
+
+.sortDropdown {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    min-width: 160px;
+    padding: 0.6rem;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 10;
+}
+
+.sortDropdownOpen {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.sortHeading {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sortOption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #111827;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.sortOption:hover {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+}
+
+.sortOptionActive {
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.sortOptionCheck {
+    font-size: 0.9rem;
+    color: #2563eb;
+}
+
+.srOnly {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* Segment buttons (view toggle) */
@@ -203,6 +341,45 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.reorderControls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.reorderBtn {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    line-height: 1;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.reorderBtn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+}
+
+.reorderBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.reorderBtn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
 }
 
 .cardDetails {
@@ -375,6 +552,20 @@
 
     .addBtn {
         width: 100%;
+    }
+
+    .headerTop {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .headerLeft {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .headerRight {
+        display: none;
     }
 
     .segment {
