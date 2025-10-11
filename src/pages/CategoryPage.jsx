@@ -331,22 +331,6 @@ function CategoryPage() {
                 </button>
             </div>
 
-            {/* Debug info */}
-            <pre style={{ background: "#f6f6f6", padding: "0.5rem" }}>
-                {JSON.stringify(
-                    {
-                        id,
-                        categoryName,
-                        view: itemView,
-                        statusFilter,
-                        totalItems: items.length,
-                        filteredCount: filteredItems.length,
-                    },
-                    null,
-                    2,
-                )}
-            </pre>
-
             {/* List */}
             <main className={styles.list}>
                 {loading && <div className={styles.loading}>Loading…</div>}
