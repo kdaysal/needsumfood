@@ -134,11 +134,18 @@ function CategoryPage() {
 
     // Toggle need/have
     const handleToggleNeed = async (itemId, need) => {
+        const nextNeed = !need
+
+        // Optimistically update the UI so the change is reflected immediately
+        setItems((prev) => prev.map((it) => (it._id === itemId ? { ...it, need: nextNeed } : it)))
+
         try {
-            const updated = toEditableItem(await updateItem(itemId, { need: !need }))
-            setItems((prev) => prev.map((it) => (it._Id === itemId ? updated : it)))
+            const updated = toEditableItem(await updateItem(itemId, { need: nextNeed }))
+            setItems((prev) => prev.map((it) => (it._id === itemId ? updated : it)))
             setBaselineItems((prev) => prev.map((it) => (it._id === itemId ? { ...updated } : it)))
         } catch (e) {
+            // Revert the optimistic update if the request fails
+            setItems((prev) => prev.map((it) => (it._id === itemId ? { ...it, need } : it)))
             console.error("Error toggling need:", e)
         }
     }
@@ -478,10 +485,10 @@ function CategoryPage() {
                                 </button>
                                 <button
                                     className={styles.iconBtn}
-                                    title={item.need ? "Mark as Have" : "Mark as Need"}
-                                    onClick={() => handleToggleNeed(item._id, item.need)}
+                                    title={item.need !== false ? "Mark as Have" : "Mark as Need"}
+                                    onClick={() => handleToggleNeed(item._id, item.need !== false)}
                                 >
-                                    {item.need ? "🛒" : "✅"}
+                                    {item.need !== false ? "🛒" : "✅"}
                                 </button>
                                 <button
                                     className={`${styles.iconBtn} ${styles.danger}`}
