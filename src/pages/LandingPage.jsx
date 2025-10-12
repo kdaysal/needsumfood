@@ -316,12 +316,12 @@ function LandingPage() {
                                 </button>
                                 {cat.hidden ? (
                                     <button
-                                        type="button"
+                                    type="button"
                                         className={styles.iconBtn}
                                         title="Show"
                                         onClick={() => handleShow(cat._id)}
                                     >
-                                        👀
+                                        🙈
                                     </button>
                                 ) : (
                                     <button
@@ -330,7 +330,7 @@ function LandingPage() {
                                         title="Hide"
                                         onClick={() => handleHide(cat._id)}
                                     >
-                                        🙈
+                                        👀
                                     </button>
                                 )}
                                 <button

@@ -197,11 +197,10 @@ function CategoryPage() {
                 ),
             )
             setBaselineItems((prev) =>
-                prev.map((it) =>
-                    it._id === updated._id
-                        ? { ...updated, name: sanitizedName }
-                        : it,
-                ),
+                prev.map((it) => {
+                    const updatedItem = it._id === updated._id ? { ...updated } : it
+                    return updatedItem
+                }),
             )
             setEditingItem(null)
         } catch (e) {
@@ -481,7 +480,7 @@ function CategoryPage() {
                                     title={item.hidden ? "Show" : "Hide"}
                                     onClick={() => handleToggleHidden(item._id, item.hidden)}
                                 >
-                                    {item.hidden ? "👀" : "🙈"}
+                                    {item.hidden ? "🙈" : "👀"}
                                 </button>
                                 <button
                                     className={styles.iconBtn}
