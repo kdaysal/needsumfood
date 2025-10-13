@@ -33,7 +33,7 @@ function CategoryPage() {
     const [items, setItems] = useState([])
     const [baselineItems, setBaselineItems] = useState([])
     const [newItem, setNewItem] = useState("")
-    the [modalItemId, setModalItemId] = useState(null)
+    const [modalItemId, setModalItemId] = useState(null)
     const [itemView, setItemView] = useState("visible")
     const [statusFilter, setStatusFilter] = useState("all")
     const [loading, setLoading] = useState(false)
