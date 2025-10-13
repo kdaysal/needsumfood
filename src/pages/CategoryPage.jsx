@@ -1,5 +1,5 @@
 // src/pages/CategoryPage.jsx
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, Link } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
@@ -43,6 +43,8 @@ function CategoryPage() {
     const [sortMode, setSortMode] = useState("alphabetical")
     const [itemCustomOrder, setItemCustomOrder] = useState([])
     const [searchTerm, setSearchTerm] = useState("")
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
+    const searchInputRef = useRef(null)
 
     const { hasUnsavedChanges, dirtyItems } = useMemo(() => {
         const baselineMap = new Map(baselineItems.map((item) => [item._id, item]))
@@ -310,12 +312,15 @@ function CategoryPage() {
 
     const isAllFilterActive = itemView === "all" && statusFilter === "all"
 
-    const handleSortModeChange = (mode) => {
-        setSortMode(mode)
-        if (mode === "custom") {
-            setItemCustomOrder((prev) => mergeOrder(prev, items.map((item) => item._id)))
-        }
-    }
+    const handleSortModeChange = useCallback(
+        (mode) => {
+            setSortMode(mode)
+            if (mode === "custom") {
+                setItemCustomOrder((prev) => mergeOrder(prev, items.map((item) => item._id)))
+            }
+        },
+        [items],
+    )
 
     const moveItem = (itemId, direction) => {
         if (sortMode !== "custom") return
@@ -332,34 +337,66 @@ function CategoryPage() {
         )
     }
 
-    const activeSortLabel = sortMode === "alphabetical" ? "Alphabetical" : "Custom"
+    const activeSortLabel = sortMode === "alphabetical" ? "Alpha" : "Custom"
+
+    useEffect(() => {
+        if (isSearchOpen && searchInputRef.current) {
+            searchInputRef.current.focus()
+        }
+    }, [isSearchOpen])
+
+    const toggleSearch = () => {
+        setIsSearchOpen((prev) => !prev)
+    }
 
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <div className={styles.metaRow}>
-                    <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
-                    <div className={styles.searchContainer}>
-                        <label className={styles.srOnly} htmlFor="item-search">
-                            Search items
-                        </label>
-                        <input
-                            id="item-search"
-                            type="search"
-                            className={styles.searchInput}
-                            placeholder="Search items"
-                            value={searchTerm}
-                            onChange={(event) => setSearchTerm(event.target.value)}
-                        />
+                <div className={styles.topBar}>
+                    <h1 className={styles.brand}>NeedSumFood</h1>
+                    <div className={styles.topBarControls}>
+                        <p className={styles.sortLabel}>{activeSortLabel}</p>
+                        <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
+                        <div
+                            className={`${styles.searchToggle} ${
+                                isSearchOpen ? styles.searchToggleOpen : ""
+                            }`}
+                        >
+                            <button
+                                type="button"
+                                className={styles.searchButton}
+                                aria-expanded={isSearchOpen}
+                                aria-controls="item-search"
+                                onClick={toggleSearch}
+                            >
+                                <span className={styles.srOnly}>
+                                    {isSearchOpen ? "Hide search" : "Show search"}
+                                </span>
+                                <span aria-hidden="true" className={styles.searchIcon}>
+                                    🔍
+                                </span>
+                            </button>
+                            <div className={styles.searchField}>
+                                <label className={styles.srOnly} htmlFor="item-search">
+                                    Search items
+                                </label>
+                                <input
+                                    id="item-search"
+                                    type="search"
+                                    ref={searchInputRef}
+                                    className={styles.searchInput}
+                                    placeholder="Search items"
+                                    value={searchTerm}
+                                    onChange={(event) => setSearchTerm(event.target.value)}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div className={styles.headerTop}>
-                    <div className={styles.headerLeft}>
-                        <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
-                        <Link to="/" className={styles.backLink}>
-                            ← Back
-                        </Link>
-                    </div>
+                <div className={styles.secondaryRow}>
+                    <Link to="/" className={styles.backLink}>
+                        ← Back
+                    </Link>
                     <button
                         className={styles.saveButton}
                         onClick={handleSaveChanges}
@@ -407,7 +444,6 @@ function CategoryPage() {
                         Have
                     </button>
                 </div>
-                <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
             </header>
 
             {/* Add item */}

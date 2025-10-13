@@ -14,13 +14,13 @@ function ConfirmModal({
 
     return (
         <div className={styles.modalOverlay}>
-            <div className={styles.modal}>
+            <div className={styles.modal} role="dialog" aria-modal="true">
                 <p>{message}</p>
                 <div className={styles.modalActions}>
-                    <button className={styles.confirm} onClick={onConfirm}>
+                    <button type="button" className={styles.confirm} onClick={onConfirm}>
                         {confirmLabel}
                     </button>
-                    <button className={styles.cancel} onClick={onCancel}>
+                    <button type="button" className={styles.cancel} onClick={onCancel}>
                         {cancelLabel}
                     </button>
                 </div>
