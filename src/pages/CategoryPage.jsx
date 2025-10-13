@@ -33,7 +33,7 @@ function CategoryPage() {
     const [items, setItems] = useState([])
     const [baselineItems, setBaselineItems] = useState([])
     const [newItem, setNewItem] = useState("")
-    const [modalItemId, setModalItemId] = useState(null)
+    the [modalItemId, setModalItemId] = useState(null)
     const [itemView, setItemView] = useState("visible")
     const [statusFilter, setStatusFilter] = useState("all")
     const [loading, setLoading] = useState(false)
@@ -42,6 +42,7 @@ function CategoryPage() {
     const [isEditingSaving, setIsEditingSaving] = useState(false)
     const [sortMode, setSortMode] = useState("alphabetical")
     const [itemCustomOrder, setItemCustomOrder] = useState([])
+    const [searchTerm, setSearchTerm] = useState("")
 
     const { hasUnsavedChanges, dirtyItems } = useMemo(() => {
         const baselineMap = new Map(baselineItems.map((item) => [item._id, item]))
@@ -268,6 +269,8 @@ function CategoryPage() {
         setStatusFilter("all")
     }
 
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+
     const filteredItems = items.filter((item) => {
         const matchesVisibility =
             itemView === "all" ? true : itemView === "hidden" ? item.hidden : !item.hidden
@@ -276,6 +279,10 @@ function CategoryPage() {
 
         if (statusFilter === "need") return item.need !== false
         if (statusFilter === "have") return item.need === false
+
+        if (normalizedSearch.length > 0) {
+            return (item.name ?? "").toLowerCase().includes(normalizedSearch)
+        }
 
         return true
     })
@@ -330,6 +337,22 @@ function CategoryPage() {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
+                <div className={styles.metaRow}>
+                    <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
+                    <div className={styles.searchContainer}>
+                        <label className={styles.srOnly} htmlFor="item-search">
+                            Search items
+                        </label>
+                        <input
+                            id="item-search"
+                            type="search"
+                            className={styles.searchInput}
+                            placeholder="Search items"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                        />
+                    </div>
+                </div>
                 <div className={styles.headerTop}>
                     <div className={styles.headerLeft}>
                         <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
@@ -410,7 +433,7 @@ function CategoryPage() {
                     <div className={styles.empty}>No items yet — add some to get started!</div>
                 )}
                 {!loading && items.length > 0 && filteredSortedItems.length === 0 && (
-                    <div className={styles.empty}>No items in this view.</div>
+                    <div className={styles.empty}>No items match your current filters.</div>
                 )}
 
                 {filteredSortedItems.map((item, index) => {

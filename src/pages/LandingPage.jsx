@@ -20,6 +20,7 @@ function LandingPage() {
     const [isEditingSaving, setIsEditingSaving] = useState(false)
     const [sortMode, setSortMode] = useState("alphabetical")
     const [customOrder, setCustomOrder] = useState([])
+    const [searchTerm, setSearchTerm] = useState("")
 
     const hasUnsavedChanges = useMemo(() => newCategory.trim().length > 0, [newCategory])
     useConfirmingBlocker(hasUnsavedChanges)
@@ -186,6 +187,17 @@ function LandingPage() {
             .filter((cat) => Boolean(cat))
     }, [categories, customOrder, sortMode])
 
+    const visibleCategories = useMemo(() => {
+        const normalizedSearch = searchTerm.trim().toLowerCase()
+        if (normalizedSearch.length === 0) {
+            return sortedCategories
+        }
+
+        return sortedCategories.filter((cat) =>
+            (cat.name ?? "").toLowerCase().includes(normalizedSearch),
+        )
+    }, [searchTerm, sortedCategories])
+
     const handleSortModeChange = (mode) => {
         setSortMode(mode)
         if (mode === "custom") {
@@ -196,7 +208,7 @@ function LandingPage() {
     const moveCategory = (categoryId, direction) => {
         if (sortMode !== "custom") return
 
-        const displayedIds = sortedCategories.map((cat) => cat._id)
+        const displayedIds = visibleCategories.map((cat) => cat._id)
         setCustomOrder((prev) =>
             reorderWithinList(
                 prev,
@@ -213,6 +225,22 @@ function LandingPage() {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
+                <div className={styles.metaRow}>
+                    <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
+                    <div className={styles.searchContainer}>
+                        <label className={styles.srOnly} htmlFor="category-search">
+                            Search categories
+                        </label>
+                        <input
+                            id="category-search"
+                            type="search"
+                            className={styles.searchInput}
+                            placeholder="Search categories"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                        />
+                    </div>
+                </div>
                 <div className={styles.headerTop}>
                     <div className={styles.headerLeft}>
                         <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
@@ -245,7 +273,6 @@ function LandingPage() {
                         All
                     </button>
                 </div>
-                <p className={styles.sortLabel}>Sorting: {activeSortLabel}</p>
             </header>
 
             {/* Add input */}
@@ -269,7 +296,11 @@ function LandingPage() {
                 {loading && <div className={styles.loading}>Loading…</div>}
                 {!loading && categories.length === 0 && <div className={styles.empty}>No categories in this view.</div>}
 
-                {sortedCategories.map((cat, index) => {
+                {!loading && categories.length > 0 && visibleCategories.length === 0 && (
+                    <div className={styles.empty}>No categories match your search.</div>
+                )}
+
+                {visibleCategories.map((cat, index) => {
                     const titleId = `category-${cat._id}-title`
 
                     return (
@@ -289,7 +320,7 @@ function LandingPage() {
                                         type="button"
                                         className={styles.reorderBtn}
                                         onClick={() => moveCategory(cat._id, "down")}
-                                        disabled={index === sortedCategories.length - 1}
+                                        disabled={index === visibleCategories.length - 1}
                                         aria-label={`Move ${cat.name || "category"} down`}
                                     >
                                         ↓
