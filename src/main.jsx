@@ -8,16 +8,24 @@ import App from "./App.jsx"
 import LandingPage from "./pages/LandingPage.jsx"
 import LoginPage from "./pages/LoginPage.jsx"
 import CategoryPage from "./pages/CategoryPage.jsx"
+import ProtectedLayout from "./components/ProtectedLayout.jsx"
 import { SortProvider } from "./context/SortContext.jsx"
+import { AuthProvider } from "./context/AuthContext.jsx"
 
 const router = createBrowserRouter(
     [
         {
             element: <App />,
             children: [
-                { path: "/", element: <LandingPage /> },
+                { path: "/", element: <LoginPage /> },
                 { path: "/login", element: <LoginPage /> },
-                { path: "/category/:id", element: <CategoryPage /> },
+                {
+                    element: <ProtectedLayout />,
+                    children: [
+                        { path: "/landing", element: <LandingPage /> },
+                        { path: "/category/:id", element: <CategoryPage /> },
+                    ],
+                },
             ],
         },
     ],
@@ -26,8 +34,10 @@ const router = createBrowserRouter(
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>
-        <SortProvider>
-            <RouterProvider router={router} />
-        </SortProvider>
+        <AuthProvider>
+            <SortProvider>
+                <RouterProvider router={router} />
+            </SortProvider>
+        </AuthProvider>
     </React.StrictMode>,
 )

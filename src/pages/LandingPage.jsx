@@ -1,16 +1,19 @@
 // src/pages/LandingPage.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
 import EditCategoryModal from "../components/EditCategoryModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
-import SortMenu from "../components/SortMenu"
+import AppMenu from "../components/AppMenu"
+import { useAuth } from "../context/AuthContext.jsx"
 import { mergeOrder, reorderWithinList } from "../utils/orderUtils"
 
 function LandingPage() {
+    const navigate = useNavigate()
+    const { user, logout } = useAuth()
     const [view, setView] = useState("visible") // "visible" | "hidden" | "all"
     const [categories, setCategories] = useState([])
     const [newCategory, setNewCategory] = useState("")
@@ -59,7 +62,7 @@ function LandingPage() {
     // Add new category
     const handleAddCategory = async () => {
         const name = newCategory.trim()
-               if (!name) return
+        if (!name) return
 
         if (categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
             setNewCategory("")
@@ -114,7 +117,7 @@ function LandingPage() {
     const handleDelete = (id) => setModalCategoryId(id)
     const confirmDelete = async () => {
         const id = modalCategoryId
-               setModalCategoryId(null)
+        setModalCategoryId(null)
         try {
             await deleteCategory(id)
             const data = await fetchCategories(view)
@@ -207,6 +210,13 @@ function LandingPage() {
         }
     }
 
+    const handleLogout = useCallback(() => {
+        logout()
+        navigate("/", { replace: true })
+    }, [logout, navigate])
+
+    const displayName = user?.username ?? "Guest User"
+
     const moveCategory = (categoryId, direction) => {
         if (sortMode !== "custom") return
 
@@ -241,7 +251,12 @@ function LandingPage() {
                     <h1 className={styles.brand}>NeedSumFood</h1>
                     <div className={styles.topBarControls}>
                         <p className={styles.sortLabel}>{activeSortLabel}</p>
-                        <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
+                        <AppMenu
+                            styles={styles}
+                            sortMode={sortMode}
+                            onSortChange={handleSortModeChange}
+                            onLogout={handleLogout}
+                        />
                         <div
                             className={`${styles.searchToggle} ${
                                 isSearchOpen ? styles.searchToggleOpen : ""
@@ -278,7 +293,7 @@ function LandingPage() {
                         </div>
                     </div>
                 </div>
-                <p className={styles.subtitle}>Welcome, User!</p>
+                <p className={styles.subtitle}>Welcome, {displayName}!</p>
 
                 {/* View toggle */}
                 <div className={styles.segment}>
@@ -375,7 +390,7 @@ function LandingPage() {
                                 </button>
                                 {cat.hidden ? (
                                     <button
-                                    type="button"
+                                        type="button"
                                         className={styles.iconBtn}
                                         title="Show"
                                         onClick={() => handleShow(cat._id)}

@@ -1,85 +1,133 @@
 // src/api.js
-const BASE_URL =
-    import.meta.env.VITE_API_BASE || "http://localhost:5001";
+const BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:5001"
+
+let authToken = null
+let unauthorizedHandler = null
+
+export const setAuthToken = (token) => {
+    authToken = token || null
+}
+
+export const setUnauthorizedHandler = (handler) => {
+    unauthorizedHandler = typeof handler === "function" ? handler : null
+}
+
+const buildHeaders = (headers = {}, skipAuth = false) => {
+    const normalized = { ...headers }
+    if (!skipAuth && authToken) {
+        normalized.Authorization = `Bearer ${authToken}`
+    }
+    return normalized
+}
+
+const request = async (path, { method = "GET", body, headers, skipAuth = false } = {}) => {
+    const options = {
+        method,
+        headers: buildHeaders(headers, skipAuth),
+    }
+
+    if (body !== undefined) {
+        options.body = JSON.stringify(body)
+        options.headers["Content-Type"] = "application/json"
+    }
+
+    const response = await fetch(`${BASE_URL}${path}`, options)
+
+    if (response.status === 401 || response.status === 403) {
+        let message = "unauthorized"
+        try {
+            const payload = await response.json()
+            if (payload?.error) {
+                message = payload.error
+            }
+        } catch (err) {
+            // Ignore JSON parse errors for non-JSON responses
+        }
+
+        if (!skipAuth && unauthorizedHandler) {
+            unauthorizedHandler()
+        }
+
+        throw new Error(message)
+    }
+
+    if (!response.ok) {
+        let message = `Request failed with status ${response.status}`
+        try {
+            const payload = await response.json()
+            if (payload?.error) {
+                message = payload.error
+            }
+        } catch (err) {
+            // Ignore JSON parse errors for non-JSON responses
+        }
+        throw new Error(message)
+    }
+
+    if (response.status === 204) {
+        return null
+    }
+
+    return response.json()
+}
+
+// ===== Auth =====
+export const login = (username, password) =>
+    request("/auth/login", {
+        method: "POST",
+        body: { username, password },
+        skipAuth: true,
+    })
+
+export const register = (username, password) =>
+    request("/auth/register", {
+        method: "POST",
+        body: { username, password },
+        skipAuth: true,
+    })
+
+export const guestLogin = () =>
+    request("/auth/guest", {
+        method: "POST",
+        skipAuth: true,
+    })
 
 // ===== Categories =====
-export async function fetchCategories(view = "visible") {
-    const res = await fetch(`${BASE_URL}/categories?view=${view}`);
-    if (!res.ok) throw new Error("Failed to load categories");
-    return res.json();
-}
+export const fetchCategories = (view = "visible") => request(`/categories?view=${view}`)
 
-export async function createCategory(name) {
-    const res = await fetch(`${BASE_URL}/categories`, {
+export const createCategory = (name) =>
+    request("/categories", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            name
-        }),
-    });
-    if (!res.ok) throw new Error("Failed to create category");
-    return res.json();
-}
+        body: { name },
+    })
 
-export async function updateCategory(id, payload) {
-    const res = await fetch(`${BASE_URL}/categories/${id}`, {
+export const updateCategory = (id, payload) =>
+    request(`/categories/${id}`, {
         method: "PATCH",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error("Failed to update category");
-    return res.json();
-}
+        body: payload,
+    })
 
-export async function deleteCategory(id) {
-    const res = await fetch(`${BASE_URL}/categories/${id}`, {
-        method: "DELETE"
-    });
-    if (!res.ok) throw new Error("Failed to delete category");
-    return res.json();
-}
+export const deleteCategory = (id) =>
+    request(`/categories/${id}`, {
+        method: "DELETE",
+    })
 
 // ===== Items =====
-export async function fetchItems(categoryId) {
-    const res = await fetch(`${BASE_URL}/items/${categoryId}`);
-    if (!res.ok) throw new Error("Failed to load items");
-    return res.json(); // returns { category, items }
-}
+export const fetchItems = (categoryId) => request(`/items/${categoryId}`)
 
-export async function createItem(categoryId, name) {
-    const res = await fetch(`${BASE_URL}/items/${categoryId}`, {
+export const createItem = (categoryId, name) =>
+    request(`/items/${categoryId}`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            name
-        }),
-    });
-    if (!res.ok) throw new Error("Failed to create item");
-    return res.json();
-}
+        body: { name },
+    })
 
-export async function updateItem(id, payload) {
-    const res = await fetch(`${BASE_URL}/items/${id}`, {
+export const updateItem = (id, payload) =>
+    request(`/items/${id}`, {
         method: "PATCH",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error("Failed to update item");
-    return res.json();
-}
+        body: payload,
+    })
 
-export async function deleteItem(id) {
-    const res = await fetch(`${BASE_URL}/items/${id}`, {
-        method: "DELETE"
-    });
-    if (!res.ok) throw new Error("Failed to delete item");
-    return res.json();
-}
+export const deleteItem = (id) =>
+    request(`/items/${id}`, {
+        method: "DELETE",
+    })

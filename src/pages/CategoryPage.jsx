@@ -1,13 +1,14 @@
 // src/pages/CategoryPage.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import styles from "./LandingPage.module.css"
 import { fetchItems, createItem, updateItem, deleteItem } from "../api"
 import ConfirmModal from "../components/ConfirmModal"
 import EditItemModal from "../components/EditItemModal"
 import useConfirmingBlocker from "../hooks/useConfirmingBlocker"
 import { sanitizeOnBlur, sanitizeOnChange } from "../utils/sanitizeInput"
-import SortMenu from "../components/SortMenu"
+import AppMenu from "../components/AppMenu"
+import { useAuth } from "../context/AuthContext.jsx"
 import { mergeOrder, reorderWithinList } from "../utils/orderUtils"
 
 const toEditableItem = (item) => ({
@@ -29,6 +30,8 @@ const toEditableItem = (item) => ({
 
 function CategoryPage() {
     const { id } = useParams()
+    const navigate = useNavigate()
+    const { user, logout } = useAuth()
     const [categoryName, setCategoryName] = useState("")
     const [items, setItems] = useState([])
     const [baselineItems, setBaselineItems] = useState([])
@@ -322,6 +325,13 @@ function CategoryPage() {
         [items],
     )
 
+    const handleLogout = useCallback(() => {
+        logout()
+        navigate("/", { replace: true })
+    }, [logout, navigate])
+
+    const displayName = user?.username ?? "Guest User"
+
     const moveItem = (itemId, direction) => {
         if (sortMode !== "custom") return
 
@@ -356,7 +366,12 @@ function CategoryPage() {
                     <h1 className={styles.brand}>NeedSumFood</h1>
                     <div className={styles.topBarControls}>
                         <p className={styles.sortLabel}>{activeSortLabel}</p>
-                        <SortMenu styles={styles} sortMode={sortMode} onChange={handleSortModeChange} />
+                        <AppMenu
+                            styles={styles}
+                            sortMode={sortMode}
+                            onSortChange={handleSortModeChange}
+                            onLogout={handleLogout}
+                        />
                         <div
                             className={`${styles.searchToggle} ${
                                 isSearchOpen ? styles.searchToggleOpen : ""
@@ -394,7 +409,7 @@ function CategoryPage() {
                     </div>
                 </div>
                 <div className={styles.secondaryRow}>
-                    <Link to="/" className={styles.backLink}>
+                    <Link to="/landing" className={styles.backLink}>
                         ← Back
                     </Link>
                     <button
@@ -405,6 +420,7 @@ function CategoryPage() {
                         {isSaving ? "Saving…" : "Save"}
                     </button>
                 </div>
+                <p className={styles.subtitle}>Welcome, {displayName}!</p>
                 <h1 className={styles.title}>{categoryName || "Category Items"}</h1>
                 <div className={styles.segment}>
                     <button
