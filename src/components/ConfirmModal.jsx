@@ -1,5 +1,7 @@
 // src/components/ConfirmModal.jsx
 import React from "react"
+import ReactDOM from "react-dom"
+import useLockBodyScroll from "../hooks/useLockBodyScroll"
 
 function ConfirmModal({
     open,
@@ -10,10 +12,12 @@ function ConfirmModal({
     onConfirm,
     onCancel,
 }) {
+    useLockBodyScroll(open)
+
     if (!open) return null
 
-    return (
-        <div className={styles.modalOverlay}>
+    const modalContent = (
+        <div className={styles.modalBackdrop}>
             <div className={styles.modal} role="dialog" aria-modal="true">
                 <p>{message}</p>
                 <div className={styles.modalActions}>
@@ -27,6 +31,12 @@ function ConfirmModal({
             </div>
         </div>
     )
+
+    if (typeof document === "undefined") {
+        return modalContent
+    }
+
+    return ReactDOM.createPortal(modalContent, document.body)
 }
 
 export default ConfirmModal

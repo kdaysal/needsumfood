@@ -1,5 +1,7 @@
 // src/components/EditItemModal.jsx
 import React from "react"
+import ReactDOM from "react-dom"
+import useLockBodyScroll from "../hooks/useLockBodyScroll"
 
 const EditItemModal = ({
     open,
@@ -11,10 +13,12 @@ const EditItemModal = ({
     onCancel,
     saving,
 }) => {
+    useLockBodyScroll(open && Boolean(item))
+
     if (!open || !item) return null
 
-    return (
-        <div className={styles.modalOverlay}>
+    const modalContent = (
+        <div className={styles.modalBackdrop}>
             <div className={`${styles.modal} ${styles.editModal}`} role="dialog" aria-modal="true">
                 <h2 className={styles.modalTitle}>Edit {item.name}</h2>
                 <div className={styles.modalContent}>
@@ -70,6 +74,12 @@ const EditItemModal = ({
             </div>
         </div>
     )
+
+    if (typeof document === "undefined") {
+        return modalContent
+    }
+
+    return ReactDOM.createPortal(modalContent, document.body)
 }
 
 export default EditItemModal
