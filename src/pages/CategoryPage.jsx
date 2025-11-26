@@ -122,6 +122,7 @@ function CategoryPage() {
             })
             setBaselineItems((prev) => [...prev, { ...created }])
             setNewItem("")
+            openEditModal(created)
         } catch (e) {
             console.error("Error adding item:", e)
         }
